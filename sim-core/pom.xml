@@ -55,6 +55,9 @@
                             <bundledSignatures combine.children="append">
                                 <bundledSignature>jdk-system-out</bundledSignature>
                             </bundledSignatures>
+                            <signaturesFiles combine.children="append">
+                                <signaturesFile>${project.basedir}/forbidden-collections.txt</signaturesFile>
+                            </signaturesFiles>
                         </configuration>
                     </execution>
                     <execution>

@@ -1,0 +1,31 @@
+# Unordered collections are banned in sim-core main code (see docs/adr/0012-determinism-policy.md).
+# Iteration order of hash-based collections depends on hashCode (identity-based for enums)
+# and, for Map.of/Set.of, on a per-JVM random salt. Tests may still use them for assertions.
+
+@defaultMessage Unordered iteration; use EnumMap, TreeMap or LinkedHashMap.
+java.util.HashMap#<init>(**)
+java.util.HashMap#newHashMap(int)
+java.util.IdentityHashMap#<init>(**)
+java.util.WeakHashMap#<init>(**)
+java.util.concurrent.ConcurrentHashMap#<init>(**)
+
+@defaultMessage Unordered iteration; use EnumSet, TreeSet or LinkedHashSet.
+java.util.HashSet#<init>(**)
+java.util.HashSet#newHashSet(int)
+
+@defaultMessage Iteration order is randomized per JVM run (salt); use List.of, EnumMap/EnumSet or TreeMap/TreeSet.
+java.util.Map#of(**)
+java.util.Map#ofEntries(**)
+java.util.Map#copyOf(java.util.Map)
+java.util.Set#of(**)
+java.util.Set#copyOf(java.util.Collection)
+
+@defaultMessage Collects into HashMap/HashSet; use the overload that takes a map/collection factory (e.g. TreeMap::new).
+java.util.stream.Collectors#toMap(java.util.function.Function,java.util.function.Function)
+java.util.stream.Collectors#toMap(java.util.function.Function,java.util.function.Function,java.util.function.BinaryOperator)
+java.util.stream.Collectors#toUnmodifiableMap(**)
+java.util.stream.Collectors#toSet()
+java.util.stream.Collectors#toUnmodifiableSet()
+java.util.stream.Collectors#groupingBy(java.util.function.Function)
+java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.stream.Collector)
+java.util.stream.Collectors#groupingByConcurrent(**)

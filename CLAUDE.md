@@ -25,9 +25,10 @@ Detaylar: [docs/GDD.md](docs/GDD.md) · Kararlar: [docs/adr/](docs/adr/) · Öğ
 - `Simulation.step(GameState, List<Command>, long tick) -> GameState` saf fonksiyon.
 - `GameState` ve tüm state immutable `record`. Modeller `sealed interface ResourceModel` altında.
 - Paketler: `com.nodezero.sim.{state, model, content, engine}`.
-- **Determinizm** (ADR-0012): duvar saati, seed'siz rastgelelik yasak → `sim-core/forbidden.txt`
-  build'i kırar. Zaman = `tick * DT`. Rastgelelik = seed'den `SplittableRandom`.
-  Sıralanmamış `HashMap` iterasyonu yasak → `SortedMap`/`EnumMap`/`List` kullan (araçla zorlanamıyor, review'da dikkat).
+- **Determinizm** (ADR-0012): `sim-core/forbidden.txt` + `forbidden-collections.txt` ihlalde build'i kırar.
+  Zaman = `tick * DT`. Rastgelelik = seed'den `SplittableRandom`. Aşkın matematik = `StrictMath`.
+  Koleksiyon: `EnumMap`/`TreeMap`/`LinkedHashMap`/`List.of`; `HashMap`, `Set.of`, `Map.of`, fabrikasız `toMap/toSet` yasak.
+- Gecikme: Erlang-C (M/M/c), ADR-0013. Tek kasa `S/(1−ρ)` sadece kodeks sezgisi.
 - Locale: testler `tr_TR` altında koşar. Tanımlayıcılarda `Locale.ROOT` kullan.
 - Kod yorumları ve tanımlayıcılar İngilizce; dokümanlar Türkçe.
 

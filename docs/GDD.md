@@ -36,7 +36,7 @@ Web tabanlı, eğitici bir **bilim kurgu tower defense + sunucu tasarım/yöneti
 | 10 | Platform | Web | [0010](adr/0010-web-platform.md) |
 | 11 | Yapay zekâ | "Sentetik Zihinler" + AIOps kulesi | [0011](adr/0011-synthetic-minds-ai-chapter.md) |
 | 12 | Determinizm | Yasaklı API listesi, seed'li `SplittableRandom` | [0012](adr/0012-determinism-policy.md) |
-| 13 | Gecikme formülü | M/M/1 yaklaşımı + ρ tavanı + kuyruk boşalma süresi | [0013](adr/0013-latency-approximation.md) |
+| 13 | Gecikme formülü | Erlang-C (M/M/c) + ρ ≥ 1'de kuyruk boşalma süresi | [0013](adr/0013-latency-approximation.md) |
 
 ## 3. Oyun döngüsü
 ```
@@ -89,11 +89,18 @@ Hazırlık ──► Dalga ──► Postmortem ──► Araştırma ──┐
 ## 6. Üç kaynak modeli (motor çekirdeği)
 | Model | Ne zaman | Formül |
 |---|---|---|
-| **utilization** | İş hızıyla ölçülen kaynaklar (CPU, disk I/O, ağ) | `ρ = λ/(c·μ)`; `W = S/(1−ρ)`; ρ ≥ 1 ise kuyruk `(λ − cμ)` hızıyla büyür |
+| **utilization** | İş hızıyla ölçülen kaynaklar (CPU, disk I/O, ağ) | `ρ = λ/(c·μ)`; `W = S + Wq` (Erlang-C, M/M/c); ρ ≥ 1 ise kuyruk `(λ − cμ)` hızıyla büyür |
 | **occupancy** | Sınırlı slot, iş slotu belli süre tutar (thread, DB bağlantısı, lock) | `L = λ·W` (Little); havuz boyutuyla karşılaştır → pending / reject |
 | **fill** | Zamanla biriken (disk alanı, bellek sızıntısı, kuyruk) | `level += (in − out)·dt`; kapasiteye ulaşınca failure |
 
-ρ ≥ 1 için gecikme: `W = S / (1 − min(ρ, 0.99)) + queue / (c·μ)` (ADR-0013).
+Gecikme Erlang-C ile hesaplanır; ρ ≥ 1 için `W = W(ρ=0.99) + queue / (c·μ)` (ADR-0013).
+Sezgi: tek kasada `S/(1−ρ)`; c kasa ortak kuyrukla çok daha az bekletir (havuzlama etkisi).
+
+| ρ (NODE-01, c=4, μ=50) | W |
+|---|---|
+| 0.50 | 21.7 ms |
+| 0.90 | 59.4 ms |
+| 0.99 | 509.0 ms |
 
 ### Model seçme rehberi
 | Soru | Model |
