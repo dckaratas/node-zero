@@ -1,7 +1,8 @@
 package com.nodezero.sim.model;
 
 /** A pure function from (previous state, load, dt) to the next state. */
-public sealed interface ResourceModel<S extends ResourceState> permits UtilizationModel {
+public sealed interface ResourceModel<S extends ResourceState, L extends Load<L>>
+        permits UtilizationModel, OccupancyModel {
 
-    S step(S previous, Load load, double dt);
+    S step(S previous, L load, double dt);
 }

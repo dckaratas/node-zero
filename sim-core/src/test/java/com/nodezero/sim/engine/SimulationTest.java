@@ -6,7 +6,11 @@ import static org.assertj.core.api.Assertions.within;
 
 import com.nodezero.sim.engine.Command.Noop;
 import com.nodezero.sim.engine.Command.SetArrivalRate;
-import com.nodezero.sim.model.Load;
+import com.nodezero.sim.engine.Command.SetHoldTime;
+import com.nodezero.sim.model.HoldLoad;
+import com.nodezero.sim.model.OccupancyModel;
+import com.nodezero.sim.model.OccupancyState;
+import com.nodezero.sim.model.RateLoad;
 import com.nodezero.sim.model.UtilizationModel;
 import com.nodezero.sim.model.UtilizationState;
 import com.nodezero.sim.state.GameState;
@@ -19,8 +23,8 @@ import org.junit.jupiter.api.Test;
 class SimulationTest {
 
     private static GameState idleStation() {
-        ResourceNode<UtilizationState> cpu =
-                new ResourceNode<>(new UtilizationModel(4, 50, 100), new Load(0), UtilizationState.initial());
+        ResourceNode<UtilizationState, RateLoad> cpu =
+                new ResourceNode<>(new UtilizationModel(4, 50, 100), new RateLoad(0), UtilizationState.initial());
         return new GameState(0, 42, Map.of(ResourceId.CPU, cpu));
     }
 
@@ -63,6 +67,27 @@ class SimulationTest {
     @Test
     void rejectsCommandForMissingResource() {
         List<Command> commands = List.of(new SetArrivalRate(ResourceId.DISK, 10));
+
+        assertThatThrownBy(() -> Simulation.step(idleStation(), commands, 1))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void slowQueryCommandExhaustsThePool() {
+        ResourceNode<OccupancyState, HoldLoad> pool =
+                new ResourceNode<>(new OccupancyModel(10, 100), new HoldLoad(100, 50), OccupancyState.initial());
+        GameState start = new GameState(0, 42, Map.of(ResourceId.DB_POOL, pool));
+
+        GameState next = Simulation.step(start, List.of(new SetHoldTime(ResourceId.DB_POOL, 500)), 1);
+
+        OccupancyState db = (OccupancyState) next.resources().get(ResourceId.DB_POOL).state();
+        assertThat(db.active()).isCloseTo(10.0, within(1e-9));
+        assertThat(db.backlog()).isCloseTo(8.0, within(1e-9));
+    }
+
+    @Test
+    void rejectsHoldTimeForRateResource() {
+        List<Command> commands = List.of(new SetHoldTime(ResourceId.CPU, 500));
 
         assertThatThrownBy(() -> Simulation.step(idleStation(), commands, 1))
                 .isInstanceOf(IllegalArgumentException.class);

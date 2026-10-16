@@ -15,4 +15,12 @@ public sealed interface Command {
             Objects.requireNonNull(resource, "resource");
         }
     }
+
+    /** Sets how long each request holds a slot of a pool resource, e.g. a query slowing down (wave 4). */
+    record SetHoldTime(ResourceId resource, double holdTimeMs) implements Command {
+
+        public SetHoldTime {
+            Objects.requireNonNull(resource, "resource");
+        }
+    }
 }

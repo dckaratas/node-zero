@@ -42,4 +42,7 @@ W   = S + Wq
 - Olumlu: M/M/c için kesin sonuç; maliyeti c adımlık bir döngü; sadece `+ − × ÷` (ADR-0012 açısından güvenli).
 - Bedel: M/M/c varsayımı (Poisson geliş, üstel servis süresi). Gerçek servis süreleri daha düzenliyse
   gerçek gecikme biraz daha düşük, kuyruklu dağılımlarda (heavy tail) daha yüksek olur.
+- Occupancy (Dilim 1b): havuz da M/M/c'dir (`c = poolSize`, `μ = 1/holdTime`); Erlang-C kodu paylaşılır.
+  `pending = min(Lq + backlog, queueLimit)`, sonlu kuyruklu M/M/c/K modelinin basit bir yaklaşımıdır.
+  Sınıra yakın bölgede kesin M/M/c/K'ye geçmek gerekirse o zaman değerlendirilecek.
 - Takip: p99 için ileride `P(W > t) = C·e^{−(cμ−λ)t}` kullanılabilir (`StrictMath.exp` ile).

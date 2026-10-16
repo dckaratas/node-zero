@@ -20,13 +20,13 @@ class UtilizationModelTest {
     private final UtilizationModel cpu = new UtilizationModel(4, 50, 100);
 
     private UtilizationState stepFromIdle(double rps) {
-        return cpu.step(UtilizationState.initial(), new Load(rps), DT);
+        return cpu.step(UtilizationState.initial(), new RateLoad(rps), DT);
     }
 
     private UtilizationState run(UtilizationState start, double rps, int ticks) {
         UtilizationState s = start;
         for (int i = 0; i < ticks; i++) {
-            s = cpu.step(s, new Load(rps), DT);
+            s = cpu.step(s, new RateLoad(rps), DT);
         }
         return s;
     }
@@ -74,7 +74,7 @@ class UtilizationModelTest {
         void singleServerReducesToMm1() {
             UtilizationModel single = new UtilizationModel(1, 50, 100);
 
-            UtilizationState s = single.step(UtilizationState.initial(), new Load(25), DT);
+            UtilizationState s = single.step(UtilizationState.initial(), new RateLoad(25), DT);
 
             // M/M/1: W = S / (1 - rho) = 20 / 0.5
             assertThat(s.latencyMs()).isCloseTo(40.0, EPS);
@@ -168,15 +168,15 @@ class UtilizationModelTest {
 
         @Test
         void rejectsInvalidLoad() {
-            assertThatThrownBy(() -> new Load(-1)).isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> new Load(Double.NaN)).isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> new Load(Double.POSITIVE_INFINITY))
+            assertThatThrownBy(() -> new RateLoad(-1)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new RateLoad(Double.NaN)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new RateLoad(Double.POSITIVE_INFINITY))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         void rejectsNonPositiveDt() {
-            assertThatThrownBy(() -> cpu.step(UtilizationState.initial(), new Load(100), 0))
+            assertThatThrownBy(() -> cpu.step(UtilizationState.initial(), new RateLoad(100), 0))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

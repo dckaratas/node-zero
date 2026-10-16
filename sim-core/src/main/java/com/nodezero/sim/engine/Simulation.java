@@ -1,6 +1,5 @@
 package com.nodezero.sim.engine;
 
-import com.nodezero.sim.model.Load;
 import com.nodezero.sim.state.GameState;
 import com.nodezero.sim.state.ResourceId;
 import com.nodezero.sim.state.ResourceNode;
@@ -25,14 +24,16 @@ public final class Simulation {
             throw new IllegalArgumentException("expected tick " + (state.tick() + 1) + " but got " + tick);
         }
 
-        EnumMap<ResourceId, ResourceNode<?>> nodes = new EnumMap<>(ResourceId.class);
+        EnumMap<ResourceId, ResourceNode<?, ?>> nodes = new EnumMap<>(ResourceId.class);
         nodes.putAll(state.resources());
 
         for (Command command : commands) {
             switch (command) {
                 case Command.Noop noop -> { }
                 case Command.SetArrivalRate set ->
-                        nodes.put(set.resource(), existing(nodes, set.resource()).withLoad(new Load(set.rps())));
+                        nodes.put(set.resource(), existing(nodes, set.resource()).withArrivalRps(set.rps()));
+                case Command.SetHoldTime set ->
+                        nodes.put(set.resource(), existing(nodes, set.resource()).withHoldTimeMs(set.holdTimeMs()));
             }
         }
 
@@ -40,8 +41,8 @@ public final class Simulation {
         return new GameState(tick, state.seed(), nodes);
     }
 
-    private static ResourceNode<?> existing(EnumMap<ResourceId, ResourceNode<?>> nodes, ResourceId id) {
-        ResourceNode<?> node = nodes.get(id);
+    private static ResourceNode<?, ?> existing(EnumMap<ResourceId, ResourceNode<?, ?>> nodes, ResourceId id) {
+        ResourceNode<?, ?> node = nodes.get(id);
         if (node == null) {
             throw new IllegalArgumentException("station has no resource " + id);
         }
