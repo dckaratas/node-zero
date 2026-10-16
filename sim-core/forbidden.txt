@@ -1,0 +1,40 @@
+# Determinism rules for sim-core (see docs/adr/0012-determinism-policy.md).
+# The simulation result must depend only on (state, commands, seed).
+
+@defaultMessage Wall-clock time is non-deterministic; derive time from the tick (tick * DT).
+java.lang.System#currentTimeMillis()
+java.lang.System#nanoTime()
+java.time.Instant#now()
+java.time.LocalDateTime#now()
+java.time.LocalDate#now()
+java.time.ZonedDateTime#now()
+java.time.OffsetDateTime#now()
+java.time.Clock#systemUTC()
+java.time.Clock#systemDefaultZone()
+
+@defaultMessage Unseeded randomness; use SplittableRandom created from the game seed.
+java.util.Random#<init>()
+java.util.SplittableRandom#<init>()
+java.lang.Math#random()
+java.util.concurrent.ThreadLocalRandom#current()
+java.util.UUID#randomUUID()
+
+@defaultMessage Math transcendentals may differ across JVMs/CPUs (intrinsics); use StrictMath.
+java.lang.Math#pow(double,double)
+java.lang.Math#exp(double)
+java.lang.Math#expm1(double)
+java.lang.Math#log(double)
+java.lang.Math#log10(double)
+java.lang.Math#log1p(double)
+java.lang.Math#sin(double)
+java.lang.Math#cos(double)
+java.lang.Math#tan(double)
+java.lang.Math#asin(double)
+java.lang.Math#acos(double)
+java.lang.Math#atan(double)
+java.lang.Math#atan2(double,double)
+java.lang.Math#sinh(double)
+java.lang.Math#cosh(double)
+java.lang.Math#tanh(double)
+java.lang.Math#cbrt(double)
+java.lang.Math#hypot(double,double)
