@@ -24,7 +24,8 @@ Detaylar: [docs/GDD.md](docs/GDD.md) · Kararlar: [docs/adr/](docs/adr/) · Öğ
 - Java 21, Maven (`./mvnw`), JUnit 5, AssertJ, Jackson YAML. **Spring yok.**
 - `Simulation.step(GameState, List<Command>, long tick) -> GameState` saf fonksiyon.
 - `GameState` ve tüm state immutable `record`. Modeller `sealed interface ResourceModel` altında.
-- Paketler: `com.nodezero.sim.{state, model, content, engine}`.
+- Paketler: `com.nodezero.sim.{state, model, content, engine}`. Bağımlılık yönü tek: `engine → state → model`
+  (döngü yok). Bu yüzden `ResourceState` ve alt tipleri `model` paketinde.
 - **Determinizm** (ADR-0012): `sim-core/forbidden.txt` + `forbidden-collections.txt` ihlalde build'i kırar.
   Zaman = `tick * DT`. Rastgelelik = seed'den `SplittableRandom`. Aşkın matematik = `StrictMath`.
   Koleksiyon: `EnumMap`/`TreeMap`/`LinkedHashMap`/`List.of`; `HashMap`, `Set.of`, `Map.of`, fabrikasız `toMap/toSet` yasak.
@@ -40,6 +41,6 @@ NODE-01: 4 çekirdek × μ=50 rps (S=20 ms), Tomcat maxThreads=200 / acceptCount
 - Build + test: `./mvnw verify` (Windows: `mvnw.cmd verify`)
 
 ## Yol haritası
-0 repo ✅ · 1 sim-core (1a utilization+engine, 1b occupancy, 1c fill—kullanıcı) · 2 YAML içerik ·
+0 repo ✅ · 1 sim-core (1a utilization+engine ✅, 1b occupancy, 1c fill—kullanıcı) · 2 YAML içerik ·
 3 dalga/hata bütçesi/komutlar/sis · 4 Spring Boot + WebSocket · 5 TS/PixiJS istemci ·
 6 postmortem/kodeks/i18n · 7 canlıya alma + oyunun kendini izlemesi.
