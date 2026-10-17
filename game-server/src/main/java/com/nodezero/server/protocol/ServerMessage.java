@@ -1,5 +1,6 @@
 package com.nodezero.server.protocol;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -23,9 +24,11 @@ public sealed interface ServerMessage {
      * First message on a new connection.
      *
      * @param tickHz simulation rate
+     * @param seed a 64-bit value, sent as a string: JavaScript numbers lose precision above 2^53
      * @param snapshotHz highest snapshot rate; the client interpolates between snapshots
      */
-    record Welcome(String session, long seed, int tickHz, int snapshotHz) implements ServerMessage {}
+    record Welcome(String session, @JsonFormat(shape = JsonFormat.Shape.STRING) long seed, int tickHz, int snapshotHz)
+            implements ServerMessage {}
 
     /**
      * The player's fog-of-war view ({@link Observation}), flattened. Sent only when something changed
@@ -60,7 +63,7 @@ public sealed interface ServerMessage {
     record Error(String reason) implements ServerMessage {}
 
     /** Seed and accepted actions by tick: enough to replay the session exactly (ADR-0006). */
-    record ReplayLog(String session, long seed, List<Entry> actions) {
+    record ReplayLog(String session, @JsonFormat(shape = JsonFormat.Shape.STRING) long seed, List<Entry> actions) {
         public record Entry(long tick, ClientMessage action) {}
     }
 }

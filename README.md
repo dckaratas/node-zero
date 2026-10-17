@@ -17,11 +17,13 @@ are used, and the project is not affiliated with or endorsed by any of the named
 | `sim-core` | Pure, deterministic Java 21 simulation engine (no Spring) |
 | `sim-bench` | JMH benchmarks for the tick budget |
 | `game-server` | Spring Boot 4 server: sessions, 10 Hz tick shards, WebSocket protocol |
+| `client` | TypeScript + PixiJS browser client (Vite): station map, HUD, contract-tested protocol |
 
 ## Build
 
 ```bash
-./mvnw verify
+./mvnw verify                                        # Java: engine, server, benchmarks
+cd client && npm ci && npm test && npm run build   # browser client
 ```
 
 ## Docs

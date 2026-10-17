@@ -1,0 +1,23 @@
+{
+  "type" : "snapshot",
+  "tick" : 302,
+  "credits" : 650,
+  "wave" : 1,
+  "phase" : "RUNNING",
+  "shield" : 1.0,
+  "metrics" : {
+    "request_rate" : 100.0,
+    "cpu_utilization" : 0.5,
+    "tomcat_threads_busy" : 2.7158375750449437,
+    "hikaricp_connections_active" : 0.5419245315454703,
+    "hikaricp_connections_pending" : 2.1213068916220845E-11,
+    "disk_usage_ratio" : 0.756039999999986,
+    "disk_fill_rate" : 0.02,
+    "latency_avg" : 27.158375750449437,
+    "latency_p99" : 125.06894230583171,
+    "error_rate" : 0.0,
+    "disk_forecast" : 1219.8000000000704,
+    "traffic_heatmap" : 100.0
+  },
+  "signals" : [ ]
+}

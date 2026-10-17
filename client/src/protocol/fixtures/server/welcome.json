@@ -1,0 +1,7 @@
+{
+  "type" : "welcome",
+  "session" : "3f2b9c1e-0000-4000-8000-000000000001",
+  "seed" : "42",
+  "tickHz" : 10,
+  "snapshotHz" : 5
+}

@@ -254,6 +254,6 @@ threat:
 | 2 | YAML içerik yükleyici + Bölüm 1 tehdit/counter dosyaları + şema doğrulama |
 | 3 | Dalga yöneticisi, hata bütçesi, komutlar, sis perdesi |
 | 4 | Spring Boot oyun sunucusu + WebSocket (5 Hz, değişince gönderilen snapshot; ADR-0015 eki) |
-| 5 | TypeScript/PixiJS istemci (altıgen harita, HUD, iyimser arayüz, interpolasyon) |
+| 5 | TypeScript/PixiJS istemci (altıgen harita, HUD, interpolasyon; ADR-0016; iyimser arayüz 5b sayaç panelinde) |
 | 6 | Postmortem + Kodeks + i18n |
 | 7 | Canlıya alma: Docker, VPS, Prometheus/Grafana ile oyunun kendisini izleme |

@@ -35,3 +35,24 @@ jobs:
       # Locale is forced to tr_TR by surefire argLine in the parent pom.
       - name: Build and test
         run: ./mvnw -B -ntp verify
+
+  client:
+    name: client (lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      # Includes the contract tests against fixtures the server's ContractFixturesTest keeps in sync.
+      - run: npm test
+      - run: npm run build

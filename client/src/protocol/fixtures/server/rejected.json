@@ -1,0 +1,9 @@
+{
+  "type" : "rejected",
+  "action" : {
+    "type" : "apply_counter",
+    "counter" : "grafana",
+    "option" : null
+  },
+  "reason" : "grafana needs prometheus installed first"
+}
