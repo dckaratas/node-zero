@@ -15,6 +15,17 @@ public record FillModel(double capacity) implements ResourceModel<FillState, Flo
     }
 
     @Override
+    public FlowLoad loadFor(Demand demand) {
+        return new FlowLoad(demand.arrivalRps(), demand.unitsPerRequest(), demand.drainPerSecond());
+    }
+
+    /** State of a disk that already holds {@code level} (e.g. a station that has been running a while). */
+    public FillState stateAt(double level) {
+        double clamped = Math.clamp(level, 0, capacity);
+        return new FillState(clamped, clamped / capacity, clamped >= capacity, 0, Double.POSITIVE_INFINITY);
+    }
+
+    @Override
     public FillState step(FillState previous, FlowLoad load, double dt) {
         if (!(dt > 0)) {
             throw new IllegalArgumentException("dt must be > 0: " + dt);

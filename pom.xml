@@ -13,6 +13,7 @@
 
     <modules>
         <module>sim-core</module>
+        <module>sim-bench</module>
     </modules>
 
     <properties>

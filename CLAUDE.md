@@ -32,6 +32,8 @@ Detaylar: [docs/GDD.md](docs/GDD.md) · Kararlar: [docs/adr/](docs/adr/) · Öğ
   Zaman = `tick * DT`. Rastgelelik = seed'den `SplittableRandom`. Aşkın matematik = `StrictMath`.
   Koleksiyon: `EnumMap`/`TreeMap`/`LinkedHashMap`/`List.of`; `HashMap`, `Set.of`, `Map.of`, fabrikasız `toMap/toSet` yasak.
 - Gecikme: Erlang-C (M/M/c), ADR-0013. Tek kasa `S/(1−ρ)` sadece kodeks sezgisi.
+- **Performans** (ADR-0014, kullanıcının açık isteği): tick < 20 µs/oturum. `Game.step` sıcak yolunda regex, stream,
+  string, log yok; içerik yüklemede bir kez çözülür. Hattı/modelleri değiştirince `sim-bench`'i çalıştır.
 - Locale: testler `tr_TR` altında koşar. Tanımlayıcılarda `Locale.ROOT` kullan.
 - Kod yorumları ve tanımlayıcılar İngilizce; dokümanlar Türkçe.
 
@@ -41,9 +43,10 @@ NODE-01: 4 çekirdek × μ=50 rps (S=20 ms), Tomcat maxThreads=200 / acceptCount
 
 ## Komutlar
 - Build + test: `./mvnw verify` (Windows: `mvnw.cmd verify`)
+- Benchmark (ADR-0014, tick < 20 µs): `./mvnw -q package -DskipTests && java -jar sim-bench/target/benchmarks.jar -prof gc`
 - Golden master yenile (formül **bilerek** değiştiyse, diff'i incele): `./mvnw test -Dtest=GoldenMasterTest -Dgolden.update=true`
 
 ## Yol haritası
-0 repo ✅ · 1 sim-core (1a utilization+engine ✅, 1b occupancy ✅, 1c fill ✅) · 2 YAML içerik ✅ ·
-3 dalga/hata bütçesi/komutlar/sis · 4 Spring Boot + WebSocket · 5 TS/PixiJS istemci ·
+0 repo ✅ · 1 sim-core (1a utilization+engine ✅, 1b occupancy ✅, 1c fill ✅) · 2 YAML içerik ✅ · 3a istek hattı + dalga trafiği ✅ ·
+3b hata bütçesi + karşı aksiyonlar · 3c sis perdesi · 4 Spring Boot + WebSocket · 5 TS/PixiJS istemci ·
 6 postmortem/kodeks/i18n · 7 canlıya alma + oyunun kendini izlemesi.

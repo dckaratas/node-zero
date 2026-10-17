@@ -5,12 +5,12 @@ threat:
   chapter: 1
   trigger: { wave: 2, event: deploy }
   traffic:
-    baseline_rps: 200
+    baseline_rps: 100
     shape:
       - { phase: plateau, duration_s: 120, multiplier: 1.0 }
     mix: { read: 0.8, write: 0.2 }
   consumes:
-    # 2 KB of DEBUG log per request, in MB
+    # 2 KB of DEBUG log per request, in MB: 100 rps -> 0.2 MB/s; NODE-01's disk has 25 MB free
     - { resource: disk, model: fill, units_per_request: 0.002 }
   effects:
     - { when: "fill_ratio >= 0.8", effect: disk_pressure, visual: cargo_hold_amber }

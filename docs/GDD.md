@@ -37,6 +37,7 @@ Web tabanlı, eğitici bir **bilim kurgu tower defense + sunucu tasarım/yöneti
 | 11 | Yapay zekâ | "Sentetik Zihinler" + AIOps kulesi | [0011](adr/0011-synthetic-minds-ai-chapter.md) |
 | 12 | Determinizm | Yasaklı API listesi, seed'li `SplittableRandom` | [0012](adr/0012-determinism-policy.md) |
 | 13 | Gecikme formülü | Erlang-C (M/M/c) + ρ ≥ 1'de kuyruk boşalma süresi | [0013](adr/0013-latency-approximation.md) |
+| 14 | Performans | Tick < 20 µs/oturum, JMH ile ölçülür | [0014](adr/0014-performance-budget.md) |
 
 ## 3. Oyun döngüsü
 ```
@@ -101,6 +102,16 @@ Sezgi: tek kasada `S/(1−ρ)`; c kasa ortak kuyrukla çok daha az bekletir (hav
 | 0.50 | 21.7 ms |
 | 0.90 | 59.4 ms |
 | 0.99 | 509.0 ms |
+
+### İstek hattı (NODE-01)
+```
+istek ─► Tomcat thread'leri ─► CPU ─► HikariCP ─► DB CPU (+ yazmalar: DB I/O)
+              (200 / 100)        (4×50)    (10)        (4 çekirdek)
+   └─ her istek log yazar ─► Disk (100 MB, 75 MB dolu)
+```
+- İstek hızları aşağı doğru aynı tick'te akar; her havuz arkasına en fazla `havuz / tutma süresi` kadar iletir.
+- Thread tutma süresi = CPU gecikmesi + havuz bekleme + sorgu süresi (önceki tick, sönümlenmiş).
+- İçerik sadece **kök nedeni** tanımlar (ör. yavaş sorgu → `db_cpu` maliyeti); havuz doygunluğu hattan doğar.
 
 ### Model seçme rehberi
 | Soru | Model |

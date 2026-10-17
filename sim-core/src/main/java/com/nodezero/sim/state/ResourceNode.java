@@ -1,5 +1,6 @@
 package com.nodezero.sim.state;
 
+import com.nodezero.sim.model.Demand;
 import com.nodezero.sim.model.HoldLoad;
 import com.nodezero.sim.model.Load;
 import com.nodezero.sim.model.ResourceModel;
@@ -30,6 +31,10 @@ public record ResourceNode<S extends ResourceState, L extends Load<L>>(ResourceM
         @SuppressWarnings("unchecked")
         L updated = (L) hold.withHoldTimeMs(holdTimeMs);
         return new ResourceNode<>(model, updated, state);
+    }
+
+    public ResourceNode<S, L> withDemand(Demand demand) {
+        return new ResourceNode<>(model, model.loadFor(demand), state);
     }
 
     public ResourceNode<S, L> advance(double dt) {

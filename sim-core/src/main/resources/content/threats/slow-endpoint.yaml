@@ -5,17 +5,16 @@ threat:
   name: { en: "Archive Drift", tr: "Arşiv Kayması" }
   chapter: 1
   trigger: { wave: 4, event: data-growth }
-  data: { table: orders, initial_rows: 1000000, rows_per_second: 2000 }
+  data: { table: orders, initial_rows: 1000000, rows_per_second: 4000 }
   traffic:
     baseline_rps: 100
     shape:
       - { phase: plateau, duration_s: 120, multiplier: 1.0 }
     mix: { read: 0.9, write: 0.1 }
   consumes:
-    # hold = base + rows * per_row_ms (1M rows -> +2 s without an index)
-    - { resource: threads, model: occupancy, hold_time_ms: 30, per_row_ms: 0.002 }
-    - { resource: db_pool, model: occupancy, hold_time_ms: 20, per_row_ms: 0.002 }
-    - { resource: db_cpu, model: utilization, service_time_ms: 5, per_row_ms: 0.0005 }
+    # Only the root cause: the query scans rows (1M rows -> 35 ms, 1.5M -> 50 ms of DB CPU).
+    # Pool and thread saturation follow from the request pipeline, not from content.
+    - { resource: db_cpu, model: utilization, service_time_ms: 5, per_row_ms: 0.00003 }
   effects:
     - { when: "pending >= 1", effect: connection_wait, visual: docking_ports_amber }
     - { when: "rejected_rps > 0", effect: request_failures, visual: docking_ports_red }

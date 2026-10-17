@@ -143,8 +143,10 @@ public record ThreatDef(
     }
 
     /**
-     * What one request costs a resource. Required fields depend on the model:
-     * utilization → service_time_ms, occupancy → hold_time_ms, fill → units_per_request.
+     * What a threat costs a resource. Required fields depend on the model:
+     * utilization → service_time_ms (per request), fill → units_per_request (per request),
+     * occupancy → hold_time_ms + slots (a background job holding pool slots; per-request pool
+     * usage is derived by the request pipeline, not declared).
      */
     public record Consumption(
             ResourceId resource,
@@ -160,7 +162,10 @@ public record ThreatDef(
             Require.present(model, "model");
             switch (model) {
                 case UTILIZATION -> Require.positive(Require.present(serviceTimeMs, "service_time_ms"), "service_time_ms");
-                case OCCUPANCY -> Require.positive(Require.present(holdTimeMs, "hold_time_ms"), "hold_time_ms");
+                case OCCUPANCY -> {
+                    Require.positive(Require.present(holdTimeMs, "hold_time_ms"), "hold_time_ms");
+                    Require.present(slots, "slots");
+                }
                 case FILL -> Require.positive(Require.present(unitsPerRequest, "units_per_request"), "units_per_request");
             }
             if (slots != null) {

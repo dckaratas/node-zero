@@ -45,4 +45,8 @@ W   = S + Wq
 - Occupancy (Dilim 1b): havuz da M/M/c'dir (`c = poolSize`, `μ = 1/holdTime`); Erlang-C kodu paylaşılır.
   `pending = min(Lq + backlog, queueLimit)`, sonlu kuyruklu M/M/c/K modelinin basit bir yaklaşımıdır.
   Sınıra yakın bölgede kesin M/M/c/K'ye geçmek gerekirse o zaman değerlendirilecek.
+- İstek hattı (Dilim 3a): havuzun arkasındaki katman **kapalı sistemdir** (en fazla `poolSize` istek içeride).
+  DB gecikmesi `min(Erlang-C, max(S, poolSize / X))` ile sınırlanır ve aynı tick'te hesaplanır. Açık kuyruk formülü
+  tek başına kullanılınca bir tick'lik gecikmeli geri besleme salınım üretmişti (DB CPU %7 ↔ %120).
+  Bilinen sınırlama: `DB_CPU` kaynağının kendi gösterdiği gecikme hâlâ açık kuyruk değeridir.
 - Takip: p99 için ileride `P(W > t) = C·e^{−(cμ−λ)t}` kullanılabilir (`StrictMath.exp` ile).

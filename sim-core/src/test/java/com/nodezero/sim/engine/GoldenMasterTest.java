@@ -33,19 +33,36 @@ import org.junit.jupiter.api.Test;
  */
 class GoldenMasterTest {
 
-    private static final Path GOLDEN = Path.of("src", "test", "resources", "golden", "station-replay.txt");
+    private static final Path DIR = Path.of("src", "test", "resources", "golden");
 
     @Test
     void replayMatchesRecordedStates() throws IOException {
-        String actual = replay();
+        assertMatchesGolden("station-replay.txt", replay());
+    }
 
+    @Test
+    void chapterOneWaveFourMatchesRecordedStates() throws IOException {
+        Game game = Game.chapterOne();
+        GameState state = game.newState(2187);
+        List<String> lines = new ArrayList<>();
+        for (long tick = 1; tick <= 1500; tick++) {
+            state = game.step(state, tick == 1 ? List.of(new Command.StartWave(4)) : List.of(), tick);
+            if (tick % 100 == 0) {
+                lines.add("tick=" + tick + " " + state.resources());
+            }
+        }
+        assertMatchesGolden("wave-4-replay.txt", String.join("\n", lines) + "\n");
+    }
+
+    private static void assertMatchesGolden(String name, String actual) throws IOException {
+        Path golden = DIR.resolve(name);
         if (Boolean.getBoolean("golden.update")) {
-            Files.createDirectories(GOLDEN.getParent());
-            Files.writeString(GOLDEN, actual, StandardCharsets.UTF_8);
+            Files.createDirectories(DIR);
+            Files.writeString(golden, actual, StandardCharsets.UTF_8);
         }
 
-        assertThat(GOLDEN).as("golden file missing, regenerate with -Dgolden.update=true").exists();
-        assertThat(Files.readString(GOLDEN, StandardCharsets.UTF_8)).isEqualTo(actual);
+        assertThat(golden).as("golden file missing, regenerate with -Dgolden.update=true").exists();
+        assertThat(Files.readString(golden, StandardCharsets.UTF_8)).isEqualTo(actual);
     }
 
     /** Wave 4 rehearsal: traffic rises, a query slows down at tick 100 and is fixed at tick 200. */

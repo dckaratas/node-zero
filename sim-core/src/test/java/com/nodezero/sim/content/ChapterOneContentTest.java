@@ -29,9 +29,10 @@ class ChapterOneContentTest {
     void eachThreatUsesTheModelAgreedInTheGdd() {
         assertThat(content.threat("log-storm").consumes().getFirst().model()).isEqualTo(ModelKind.FILL);
         assertThat(content.threat("traffic-surge").consumes().getFirst().model()).isEqualTo(ModelKind.UTILIZATION);
+        // Only the root cause is declared; pool and thread saturation emerge from the pipeline.
         assertThat(content.threat("slow-endpoint").consumes())
                 .extracting(ThreatDef.Consumption::resource)
-                .containsExactly(ResourceId.THREADS, ResourceId.DB_POOL, ResourceId.DB_CPU);
+                .containsExactly(ResourceId.DB_CPU);
         assertThat(content.threat("nightly-report-job").consumes())
                 .extracting(ThreatDef.Consumption::model)
                 .containsExactly(ModelKind.UTILIZATION, ModelKind.OCCUPANCY);

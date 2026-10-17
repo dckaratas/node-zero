@@ -24,6 +24,11 @@ public record OccupancyModel(int poolSize, int queueLimit) implements ResourceMo
     }
 
     @Override
+    public HoldLoad loadFor(Demand demand) {
+        return new HoldLoad(demand.arrivalRps(), demand.holdTimeMs());
+    }
+
+    @Override
     public OccupancyState step(OccupancyState previous, HoldLoad load, double dt) {
         double lambda = load.arrivalRps();
         double releaseRate = 1000.0 / load.holdTimeMs(); // mu: requests one slot completes per second
