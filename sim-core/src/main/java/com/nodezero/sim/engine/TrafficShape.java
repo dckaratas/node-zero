@@ -21,4 +21,22 @@ final class TrafficShape {
         // After the shape ends traffic settles at the last phase's final multiplier.
         return traffic.baselineRps() * (last == null ? 1.0 : last.multiplier().to());
     }
+
+    static double durationS(ThreatDef.Traffic traffic) {
+        double total = 0;
+        for (ThreatDef.Phase phase : traffic.shape()) {
+            total += phase.durationS();
+        }
+        return total;
+    }
+
+    /** Requests the whole shape brings: the area under the (piecewise linear) rate curve. */
+    static double totalRequests(ThreatDef.Traffic traffic) {
+        double total = 0;
+        for (ThreatDef.Phase phase : traffic.shape()) {
+            double meanMultiplier = (phase.multiplier().from() + phase.multiplier().to()) / 2;
+            total += traffic.baselineRps() * meanMultiplier * phase.durationS();
+        }
+        return total;
+    }
 }

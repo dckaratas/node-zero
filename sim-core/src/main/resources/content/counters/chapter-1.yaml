@@ -103,7 +103,7 @@ counters:
         side_effect:
           - { type: extra_load, target: db_io, value: 0.2 }
         tradeoff_key: tradeoff.create_index_concurrently
-    effect: { type: set_per_row_ms, target: db_pool, value: 0 }
+    effect: { type: set_per_row_ms, target: db_cpu, value: 0 }
     tradeoff_key: tradeoff.create_index
     codex: [db-indexes, create-index-concurrently]
 

@@ -2,6 +2,7 @@ package com.nodezero.bench;
 
 import com.nodezero.sim.engine.Command;
 import com.nodezero.sim.engine.Game;
+import com.nodezero.sim.engine.GameBalance;
 import com.nodezero.sim.state.GameState;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +39,7 @@ public class GameStepBenchmark {
 
     @Setup
     public void setUp() {
-        game = Game.chapterOne();
+        game = Game.chapterOne(GameBalance.PRACTICE);
         GameState s = game.newState(42);
         for (long tick = 1; tick <= 600; tick++) {
             s = game.step(s, tick == 1 && wave > 0 ? List.of(new Command.StartWave(wave)) : List.of(), tick);

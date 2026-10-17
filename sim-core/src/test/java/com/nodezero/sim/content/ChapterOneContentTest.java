@@ -33,9 +33,11 @@ class ChapterOneContentTest {
         assertThat(content.threat("slow-endpoint").consumes())
                 .extracting(ThreatDef.Consumption::resource)
                 .containsExactly(ResourceId.DB_CPU);
+        // The job holds 8 of 10 connections; its I/O is described in the job section.
         assertThat(content.threat("nightly-report-job").consumes())
                 .extracting(ThreatDef.Consumption::model)
-                .containsExactly(ModelKind.UTILIZATION, ModelKind.OCCUPANCY);
+                .containsExactly(ModelKind.OCCUPANCY);
+        assertThat(content.threat("nightly-report-job").job().ioRps()).isEqualTo(100);
     }
 
     @Test

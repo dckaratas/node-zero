@@ -11,13 +11,13 @@ import java.util.Objects;
  * <p>Resources are copied into an {@link EnumMap} so iteration follows {@link ResourceId}
  * declaration order on every JVM (ADR-0012).
  */
-public record GameState(long tick, long seed, WaveState wave, Map<ResourceId, ResourceNode<?, ?>> resources) {
+public record GameState(long tick, long seed, Progress progress, Map<ResourceId, ResourceNode<?, ?>> resources) {
 
     public GameState {
         if (tick < 0) {
             throw new IllegalArgumentException("tick must be >= 0: " + tick);
         }
-        Objects.requireNonNull(wave, "wave");
+        Objects.requireNonNull(progress, "progress");
         Objects.requireNonNull(resources, "resources");
         EnumMap<ResourceId, ResourceNode<?, ?>> copy = new EnumMap<>(ResourceId.class);
         resources.forEach((id, node) -> copy.put(
@@ -25,9 +25,21 @@ public record GameState(long tick, long seed, WaveState wave, Map<ResourceId, Re
         resources = Collections.unmodifiableMap(copy);
     }
 
-    /** State in the preparation phase (no wave running). */
+    /** Resources only, no game progress (kernel-level tests). */
     public GameState(long tick, long seed, Map<ResourceId, ResourceNode<?, ?>> resources) {
-        this(tick, seed, WaveState.PREPARATION, resources);
+        this(tick, seed, Progress.NONE, resources);
+    }
+
+    public WaveState wave() {
+        return progress.wave();
+    }
+
+    public GameState withProgress(Progress newProgress) {
+        return new GameState(tick, seed, newProgress, resources);
+    }
+
+    public GameState withResources(Map<ResourceId, ResourceNode<?, ?>> newResources) {
+        return new GameState(tick, seed, progress, newResources);
     }
 
     public ResourceNode<?, ?> resource(ResourceId id) {

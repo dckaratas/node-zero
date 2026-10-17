@@ -4,6 +4,7 @@ threat:
   id: slow-endpoint
   name: { en: "Archive Drift", tr: "Arşiv Kayması" }
   chapter: 1
+  persists: true   # the table keeps growing after the wave
   trigger: { wave: 4, event: data-growth }
   data: { table: orders, initial_rows: 1000000, rows_per_second: 4000 }
   traffic:

@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
  * a file committed from one machine and checked by CI on others can.
  *
  * <p>When a formula changes on purpose, regenerate and review the diff:
- * {@code ./mvnw test -Dtest=GoldenMasterTest -Dgolden.update=true}
+ * {@code ./mvnw test -pl sim-core -Dtest=GoldenMasterTest -Dgolden.update=true}
  */
 class GoldenMasterTest {
 
@@ -42,7 +42,7 @@ class GoldenMasterTest {
 
     @Test
     void chapterOneWaveFourMatchesRecordedStates() throws IOException {
-        Game game = Game.chapterOne();
+        Game game = Game.chapterOne(GameBalance.PRACTICE);
         GameState state = game.newState(2187);
         List<String> lines = new ArrayList<>();
         for (long tick = 1; tick <= 1500; tick++) {

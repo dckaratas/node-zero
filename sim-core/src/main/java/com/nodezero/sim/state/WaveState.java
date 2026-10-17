@@ -1,14 +1,34 @@
 package com.nodezero.sim.state;
 
 /**
- * Which wave is running and since when. Wave 0 is the preparation phase before the first wave.
+ * The current wave and its error budget (ADR-0007). Wave 0 is the preparation phase.
  *
  * @param number current wave; matches {@code trigger.wave} of the threat it brings
  * @param startTick tick at which the wave started; time into the wave is {@code (tick - startTick) * DT}
+ * @param durationS length of the wave's traffic shape
+ * @param expectedRequests requests the wave is expected to bring; the budget is (1 - SLO) of this
+ * @param requests requests that arrived so far
+ * @param failedRequests requests that failed or breached the latency SLO so far
+ * @param lastFailedRps failure rate of the previous tick (retries react to it)
  */
-public record WaveState(int number, long startTick) {
+public record WaveState(
+        int number,
+        long startTick,
+        Phase phase,
+        double durationS,
+        double expectedRequests,
+        double requests,
+        double failedRequests,
+        double lastFailedRps) {
 
-    public static final WaveState PREPARATION = new WaveState(0, 0);
+    public enum Phase {
+        PREPARATION,
+        RUNNING,
+        COMPLETE,
+        FAILED
+    }
+
+    public static final WaveState PREPARATION = new WaveState(0, 0, Phase.PREPARATION, 0, 0, 0, 0, 0);
 
     public WaveState {
         if (number < 0) {
@@ -17,5 +37,24 @@ public record WaveState(int number, long startTick) {
         if (startTick < 0) {
             throw new IllegalArgumentException("startTick must be >= 0: " + startTick);
         }
+    }
+
+    public static WaveState running(int number, long startTick, double durationS, double expectedRequests) {
+        return new WaveState(number, startTick, Phase.RUNNING, durationS, expectedRequests, 0, 0, 0);
+    }
+
+    /** Shield energy in [0, 1]: the share of the error budget still unspent. */
+    public double shield(double slo) {
+        double allowance = (1 - slo) * expectedRequests;
+        return allowance <= 0 ? 1 : Math.clamp(1 - failedRequests / allowance, 0, 1);
+    }
+
+    public WaveState record(double arrived, double failed, double failedRps) {
+        return new WaveState(number, startTick, phase, durationS, expectedRequests,
+                requests + arrived, failedRequests + failed, failedRps);
+    }
+
+    public WaveState in(Phase newPhase) {
+        return new WaveState(number, startTick, newPhase, durationS, expectedRequests, requests, failedRequests, 0);
     }
 }

@@ -25,21 +25,28 @@ public record OccupancyModel(int poolSize, int queueLimit) implements ResourceMo
 
     @Override
     public HoldLoad loadFor(Demand demand) {
-        return new HoldLoad(demand.arrivalRps(), demand.holdTimeMs());
+        return new HoldLoad(demand.arrivalRps(), demand.holdTimeMs(), demand.reservedSlots());
+    }
+
+    /** Slots left for requests after background reservations; at least one. */
+    public int availableSlots(int reservedSlots) {
+        return Math.max(1, poolSize - reservedSlots);
     }
 
     @Override
     public OccupancyState step(OccupancyState previous, HoldLoad load, double dt) {
         double lambda = load.arrivalRps();
+        int slots = availableSlots(load.reservedSlots());
         double releaseRate = 1000.0 / load.holdTimeMs(); // mu: requests one slot completes per second
-        double capacity = poolSize * releaseRate;
+        double capacity = slots * releaseRate;
         Backlog backlog = Backlog.next(previous.backlog(), lambda, capacity, queueLimit, dt);
 
         // Little's law: busy slots = arrival rate * hold time. Queued work keeps every slot busy.
+        // Reserved slots count as active, as they do in hikaricp_connections_active.
         double demand = lambda * load.holdTimeMs() / 1000.0;
-        double active = backlog.size() > 0 ? poolSize : Math.min(demand, poolSize);
+        double active = (backlog.size() > 0 ? slots : Math.min(demand, slots)) + (poolSize - slots);
 
-        double steadyWaitMs = ErlangC.cappedMeanWaitMs(poolSize, releaseRate, lambda);
+        double steadyWaitMs = ErlangC.cappedMeanWaitMs(slots, releaseRate, lambda);
         // Little's law again, on the waiting line: Lq = lambda * Wq.
         double steadyPending = Math.min(lambda, ErlangC.RHO_CAP * capacity) * steadyWaitMs / 1000.0;
         double pending = Math.min(steadyPending + backlog.size(), queueLimit);

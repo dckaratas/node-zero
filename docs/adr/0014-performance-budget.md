@@ -35,3 +35,10 @@ açık bir gereksinim olarak koydu.
 - Olumlu: Bütçenin ~10× altındayız; immutable record tasarımı korunabilir.
 - Bedel: ~2.5 KB/tick → 5000 oturumda ~125 MB/s kısa ömürlü nesne. Young GC bunu ucuz toplar; yine de izlenecek.
 - Takip: Dilim 4'te (Spring Boot) uçtan uca ölçüm: snapshot serileştirme ve WebSocket maliyeti tick'ten pahalı olacaktır.
+
+### Ölçüm (2026-10-17, Dilim 3b sonrası: hata bütçesi, karşı aksiyonlar, job)
+| Senaryo | µs/tick | B/tick |
+|---|---|---|
+| Sakin istasyon | 1.4 | 2232 |
+| Dalga 3 | 1.5 | 2656 |
+| Dalga 4 | 1.4 | 2680 |

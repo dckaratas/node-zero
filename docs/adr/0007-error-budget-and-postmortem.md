@@ -21,4 +21,5 @@ SLO içinde kalmaktır. Hata bütçesi aynı zamanda risk alma (deploy, deney) i
 ## Sonuçlar
 - Olumlu: SLO/SLI/hata bütçesi kavramları oynanarak öğrenilir.
 - Bedel: "Başarısız istek" tanımı netleşmeli (5xx, 429, gecikme eşiğini aşanlar).
-- Takip: Gecikme SLO'su (ör. p99 < 500 ms) eklenip eklenmeyeceğine Dilim 3'te karar verilecek.
+- Uygulama (Dilim 3b): bütçe dalga başına; gecikme SLO'su tick ortalaması > 500 ms (p99 değil, ADR-0013).
+  Kalkan sıfırlanınca dalga `FAILED`. Fizik testleri ve benchmark için `GameBalance.PRACTICE` dalgayı sonuna kadar oynatır.

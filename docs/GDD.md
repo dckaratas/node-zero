@@ -48,6 +48,20 @@ Hazırlık ──► Dalga ──► Postmortem ──► Araştırma ──┐
    └──────────────────────────────────────────────────┘
 ```
 
+### Dalga, kalkan ve kredi (Dilim 3b)
+| Kural | Değer |
+|---|---|
+| Kalkan (hata bütçesi) | Dalga başına: beklenen isteklerin %1'i (SLO %99). Kalkan = harcanmamış bütçe oranı |
+| Başarısız istek | Ret (Tomcat, Hikari, CPU kuyruğu) + 429 + kesinti + statement timeout + yazma kilidi + dolu diskte yazma + **gecikmesi > 500 ms olan istekler** |
+| Dalga sonu | Trafik şekli bitince `COMPLETE`; kalkan sıfırlanırsa `FAILED` (ödül yok) |
+| Ödül | `round(300 × kalan kalkan) − kurulu karşı aksiyonların upkeep toplamı` |
+| Kalıcı tehditler | `persists: true` olanlar (DEBUG log, büyüyen tablo, günlük job) sonraki dalgalarda da etkili: teknik borç |
+| Karşı aksiyon zamanlaması | Kurulum süresince geçiş yan etkileri (kesinti, yazma kilidi, ek I/O); sonra etkin. Hazırlıkta kurmak ucuzdur |
+| Teşhis (insight) | `requires_insight` olan aksiyonlar ancak teşhis açıldıktan sonra alınır (ör. `pg-stat-statements`) |
+
+Etki türleri Java'da (`EffectKind`): parametre değiştirenler, donanım değiştirenler (çekirdek/thread/disk ekleme),
+sadece kurulumda zarar verenler ve anlatısal olanlar. YAML bilinmeyen tür kullanırsa kurallar yüklenmez.
+
 ### Temel mekanikler
 | Mekanik | Gerçek dünya karşılığı |
 |---|---|

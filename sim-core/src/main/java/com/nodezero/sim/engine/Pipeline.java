@@ -14,64 +14,70 @@ import com.nodezero.sim.model.OccupancyModel;
 import com.nodezero.sim.model.OccupancyState;
 import com.nodezero.sim.model.UtilizationModel;
 import com.nodezero.sim.model.UtilizationState;
+import com.nodezero.sim.state.ActiveThreat;
 import com.nodezero.sim.state.GameState;
+import com.nodezero.sim.state.InstalledCounter;
+import com.nodezero.sim.state.Progress;
 import com.nodezero.sim.state.ResourceId;
-import com.nodezero.sim.state.ResourceNode;
+import com.nodezero.sim.state.WaveState;
 import java.util.EnumMap;
-import java.util.Map;
 
 /**
- * Request path of NODE-01: Tomcat threads → CPU → HikariCP → DB CPU / DB I/O, plus logs to disk.
+ * Request path of NODE-01: [Nginx] → Tomcat threads → CPU → HikariCP → DB CPU / DB I/O, plus logs to disk.
  *
- * <p>Arrival rates flow downstream within the tick. Latencies flow upstream with a one-tick lag:
- * a thread's hold time is built from the CPU, pool and query latencies of the previous tick. The lag
- * (100 ms) breaks the cycle "hold time depends on latency depends on load" without iteration, which
- * keeps the tick cheap and deterministic. This coupling is what makes a slow query saturate the
- * pools while app CPU stays low (wave 4).
+ * <p>Arrival rates flow downstream within the tick. Thread hold time is built from last tick's
+ * latencies, damped, which breaks the "hold depends on latency depends on load" cycle without
+ * iteration. The database tier behind the pool is a closed system and is solved in the same tick.
  *
- * <p>Hot path (ADR-0014): no streams, regex, strings or logging; one small EnumMap per tick.
+ * <p>Costs come from the active threats (root causes only); counters modify them (ADR-0005, decision C).
+ *
+ * <p>Hot path (ADR-0014): no streams, regex, strings or logging; a few small objects per tick.
  */
-final class Pipeline implements LoadPlanner {
+final class Pipeline {
 
     /** Share of the gap to the new hold time closed per tick. */
     private static final double DAMPING = 0.5;
+    /** One real second is one game minute, so a game day lasts 1440 s. */
+    private static final double DAY_SECONDS = 1440;
 
     private final Rules rules;
-    private final ThreatDef[] threatByWave;
 
     Pipeline(Rules rules) {
         this.rules = rules;
-        int maxWave = 0;
-        for (ThreatDef t : rules.content().threats().values()) {
-            maxWave = Math.max(maxWave, t.trigger().wave());
-        }
-        threatByWave = new ThreatDef[maxWave + 1];
-        for (int wave = 1; wave <= maxWave; wave++) {
-            threatByWave[wave] = rules.threatForWave(wave);
-        }
     }
 
-    @Override
-    public Map<ResourceId, Demand> plan(GameState s, long tick) {
+    Plan plan(GameState s, long tick) {
+        Progress progress = s.progress();
+        WaveState wave = progress.wave();
         StationLayout station = rules.station();
-        int wave = s.wave().number();
-        ThreatDef threat = wave < threatByWave.length ? threatByWave[wave] : null;
-        double seconds = (tick - s.wave().startTick()) * SimConstants.DT;
+        Modifiers m = modifiers(progress, tick);
 
         double arrivals = station.baselineRps();
         double writeFraction = station.writeFraction();
+        ThreatDef waveThreat = wave.phase() == WaveState.Phase.RUNNING ? rules.threatForWave(wave.number()) : null;
+        if (waveThreat != null) {
+            arrivals = TrafficShape.rateAt(waveThreat.traffic(), (tick - wave.startTick()) * SimConstants.DT);
+            writeFraction = waveThreat.traffic().mix().write();
+        }
+
+        // Costs of the active threats.
         double logUnits = station.logUnitsPerRequest();
         double cpuCost = 1;
         double dbCpuCost = 1;
         double dbIoCost = 1;
-        if (threat != null) {
-            arrivals = TrafficShape.rateAt(threat.traffic(), seconds);
-            writeFraction = threat.traffic().mix().write();
-            double rows = threat.data() == null ? 0 : threat.data().initialRows() + threat.data().rowsPerSecond() * seconds;
-            for (ThreatDef.Consumption c : threat.consumes()) {
+        int reservedSlots = 0;
+        double jobIoRps = 0;
+        double jobIoCost = 1;
+        for (ActiveThreat active : progress.activeThreats()) {
+            ThreatDef t = rules.content().threat(active.id());
+            double since = (tick - active.sinceTick()) * SimConstants.DT;
+            double rows = t.data() == null ? 0 : t.data().initialRows() + t.data().rowsPerSecond() * since;
+            for (ThreatDef.Consumption c : t.consumes()) {
                 switch (c.model()) {
                     case UTILIZATION -> {
-                        double factor = costFactor(s, c, rows);
+                        double perRow = c.perRowMs() == null ? 0
+                                : (c.resource() == DB_CPU && !Double.isNaN(m.perRowMs) ? m.perRowMs : c.perRowMs());
+                        double factor = (c.serviceTimeMs() + perRow * rows) / serviceTimeMs(s, c.resource());
                         if (c.resource() == CPU) {
                             cpuCost = factor;
                         } else if (c.resource() == DB_CPU) {
@@ -81,52 +87,94 @@ final class Pipeline implements LoadPlanner {
                         }
                     }
                     case FILL -> logUnits = c.unitsPerRequest();
-                    case OCCUPANCY -> { } // background jobs holding slots: slice 3b
+                    case OCCUPANCY -> {
+                        if (t.job() != null && jobRunning(t.job(), c, rows, since, m)) {
+                            reservedSlots += m.isolatedSlots > 0 ? 0 : c.slots();
+                            jobIoRps += t.job().ioRps() * m.jobThrottle;
+                            jobIoCost = t.job().ioServiceTimeMs() / serviceTimeMs(s, DB_IO);
+                        }
+                    }
                 }
             }
         }
+        if (!Double.isNaN(m.logUnits)) {
+            logUnits = m.logUnits;
+        }
+        dbIoCost *= m.ioLoadFactor;
 
-        // Thread hold from last tick's latencies, damped against last tick's hold to avoid oscillation.
+        // Edge: rate limiter (429s) and Tomcat.
+        double admitted = Math.min(arrivals, m.rateLimitRps);
+        double edgeFailed = arrivals - admitted;
         double threadHoldMs = damped(s, THREADS,
                 latencyMs(s, CPU, cpuCost) + occupancy(s, DB_POOL).waitMs() + previousHoldMs(s, DB_POOL));
+        double accepted = Math.max(0, admitted - occupancy(s, THREADS).rejectedRps());
+        double toCpu = Math.min(accepted, throughputRps(s, THREADS, threadHoldMs, 0));
+        if (m.cpuDown) {
+            edgeFailed += toCpu;
+            toCpu = 0;
+        }
 
-        // A pool forwards at most what its slots can cycle (closed loop): a saturated pool queues
-        // requests instead of overloading the tier behind it.
-        double accepted = Math.max(0, arrivals - occupancy(s, THREADS).rejectedRps());
-        double toCpu = Math.min(accepted, throughputRps(s, THREADS, threadHoldMs));
-        double toPool = Math.max(0, toCpu - occupancy(s, DB_POOL).rejectedRps());
-
-        // Database tier in the same tick: with only `connections` queries in flight, the database never
-        // sees more than its capacity and a query never waits longer than connections / throughput.
+        // Pool and database (closed system: at most `connections` queries in flight).
+        double retries = wave.lastFailedRps() > 0 ? m.retryMultiplier : 1;
+        double toPool = Math.max(0, toCpu - occupancy(s, DB_POOL).rejectedRps()) * retries;
+        int connections = pool(s, DB_POOL).availableSlots(reservedSlots);
         UtilizationModel db = utilizationModel(s, DB_CPU);
         double toDatabase = Math.min(toPool, db.maxSteadyRps(dbCpuCost));
         double dbLatencyMs = db.serviceTimeMs() * dbCpuCost;
         if (toDatabase > 0) {
-            double closedBoundMs = 1000.0 * poolSize(s, DB_POOL) / toDatabase;
+            double closedBoundMs = 1000.0 * connections / toDatabase;
             dbLatencyMs = Math.min(db.steadyLatencyMs(toDatabase, dbCpuCost), Math.max(dbLatencyMs, closedBoundMs));
         }
-        double queryMs = dbLatencyMs + writeFraction * latencyMs(s, DB_IO, dbIoCost);
+        double userIoRps = toDatabase * writeFraction;
+        double ioRps = userIoRps + jobIoRps;
+        double ioCost = ioRps > 0 ? (userIoRps * dbIoCost + jobIoRps * jobIoCost) / ioRps : dbIoCost;
+        double queryMs = dbLatencyMs + writeFraction * latencyMs(s, DB_IO, ioCost);
+        if (queryMs > m.holdCapMs) {
+            edgeFailed += toDatabase; // statement_timeout cancels the queries
+            queryMs = m.holdCapMs;
+        }
+        if (m.writeLocked) {
+            edgeFailed += userIoRps;
+        }
 
         EnumMap<ResourceId, Demand> demands = new EnumMap<>(ResourceId.class);
-        demands.put(THREADS, Demand.hold(arrivals, threadHoldMs));
+        demands.put(THREADS, Demand.hold(admitted, threadHoldMs, 0));
         demands.put(CPU, Demand.rate(toCpu, cpuCost));
-        demands.put(DB_POOL, Demand.hold(toPool, queryMs));
+        demands.put(DB_POOL, Demand.hold(toPool, queryMs, reservedSlots));
         demands.put(DB_CPU, Demand.rate(toDatabase, dbCpuCost));
-        demands.put(DB_IO, Demand.rate(toDatabase * writeFraction, dbIoCost));
-        demands.put(DISK, Demand.flow(accepted, logUnits, 0));
-        return demands;
+        demands.put(DB_IO, Demand.rate(ioRps, ioCost));
+        demands.put(DISK, Demand.flow(toCpu, logUnits, m.drainPerSecond));
+        return new Plan(demands, arrivals, toCpu, edgeFailed, writeFraction, threadHoldMs);
     }
 
-    /** Threat service time relative to the station's baseline for that resource. */
-    private static double costFactor(GameState s, ThreatDef.Consumption c, double rows) {
-        double ms = c.serviceTimeMs() + (c.perRowMs() == null ? 0 : c.perRowMs() * rows);
-        return ms / utilizationModel(s, c.resource()).serviceTimeMs();
+    /** A daily job runs for rows / rows_per_minute game minutes, slower when throttled or isolated. */
+    private static boolean jobRunning(ThreatDef.Job job, ThreatDef.Consumption c, double rows, double since, Modifiers m) {
+        if (m.jobRescheduled) {
+            return false;
+        }
+        double durationS = rows / job.rowsPerMinute() / m.jobThrottle;
+        if (m.isolatedSlots > 0) {
+            durationS *= (double) c.slots() / m.isolatedSlots;
+        }
+        return since % DAY_SECONDS < durationS;
     }
 
-    /** Previous tick's latency; before any load, the (cost-adjusted) service time. */
-    private static double latencyMs(GameState s, ResourceId id, double costFactor) {
-        double latency = ((UtilizationState) s.resource(id).state()).latencyMs();
-        return latency > 0 ? latency : utilizationModel(s, id).serviceTimeMs() * costFactor;
+    private Modifiers modifiers(Progress progress, long tick) {
+        Modifiers m = new Modifiers();
+        for (InstalledCounter installed : progress.counters()) {
+            boolean active = installed.isActive(tick);
+            for (Rules.Effect e : rules.counter(installed.id()).variant(installed.option()).effects()) {
+                boolean applies = switch (e.kind().timing) {
+                    case ACTIVE -> active;
+                    case BUILD -> !active;
+                    case STRUCTURAL, NARRATIVE -> false;
+                };
+                if (applies) {
+                    m.apply(e);
+                }
+            }
+        }
+        return m;
     }
 
     /** Exponential smoothing against last tick's hold time; a first-order lag of about 2 ticks. */
@@ -140,21 +188,66 @@ final class Pipeline implements LoadPlanner {
         return ((HoldLoad) s.resource(pool).load()).holdTimeMs();
     }
 
-    /** Requests per second a pool's slots can complete at the given hold time. */
-    private static double throughputRps(GameState s, ResourceId pool, double holdMs) {
-        return poolSize(s, pool) * 1000.0 / holdMs;
+    /** Requests per second a pool's free slots can complete at the given hold time. */
+    private static double throughputRps(GameState s, ResourceId pool, double holdMs, int reserved) {
+        return pool(s, pool).availableSlots(reserved) * 1000.0 / holdMs;
     }
 
-    private static int poolSize(GameState s, ResourceId pool) {
-        return ((OccupancyModel) s.resource(pool).model()).poolSize();
+    /** Previous tick's latency; before any load, the (cost-adjusted) service time. */
+    private static double latencyMs(GameState s, ResourceId id, double costFactor) {
+        double latency = ((UtilizationState) s.resource(id).state()).latencyMs();
+        return latency > 0 ? latency : serviceTimeMs(s, id) * costFactor;
+    }
+
+    private static double serviceTimeMs(GameState s, ResourceId id) {
+        return utilizationModel(s, id).serviceTimeMs();
     }
 
     private static OccupancyState occupancy(GameState s, ResourceId id) {
         return (OccupancyState) s.resource(id).state();
     }
 
+    private static OccupancyModel pool(GameState s, ResourceId id) {
+        return (OccupancyModel) s.resource(id).model();
+    }
+
     private static UtilizationModel utilizationModel(GameState s, ResourceId id) {
-        ResourceNode<?, ?> node = s.resource(id);
-        return (UtilizationModel) node.model();
+        return (UtilizationModel) s.resource(id).model();
+    }
+
+    /** What the installed counters change this tick. Mutable, but local to one plan() call. */
+    private static final class Modifiers {
+        double logUnits = Double.NaN;
+        double drainPerSecond;
+        double rateLimitRps = Double.POSITIVE_INFINITY;
+        double holdCapMs = Double.POSITIVE_INFINITY;
+        double perRowMs = Double.NaN;
+        boolean jobRescheduled;
+        double jobThrottle = 1;
+        int isolatedSlots;
+        double retryMultiplier = 1;
+        boolean cpuDown;
+        boolean writeLocked;
+        double ioLoadFactor = 1;
+
+        void apply(Rules.Effect e) {
+            switch (e.kind()) {
+                case SET_UNITS_PER_REQUEST -> logUnits = e.value();
+                case ADD_DRAIN -> drainPerSecond += e.value();
+                case RATE_LIMIT -> rateLimitRps = Math.min(rateLimitRps, e.value());
+                case CAP_HOLD_TIME -> holdCapMs = Math.min(holdCapMs, e.value());
+                case SET_PER_ROW_MS -> perRowMs = e.value();
+                case RESCHEDULE -> jobRescheduled = true;
+                case THROTTLE_JOB -> jobThrottle *= e.value();
+                case ISOLATE_SLOTS -> isolatedSlots = (int) e.value();
+                case LOAD_MULTIPLIER -> retryMultiplier *= e.value();
+                case DOWNTIME -> cpuDown = true;
+                case WRITE_LOCK -> writeLocked = true;
+                case EXTRA_LOAD -> ioLoadFactor *= 1 + e.value();
+                case ADD_SERVERS, ADD_SLOTS, SCALE_CAPACITY, RETRY_FAILED, REJECT_WITH_STATUS, LESS_DEBUG_CONTEXT,
+                        SHORTER_LOG_HISTORY, PROBLEM_POSTPONED, FAILED_QUERIES, MORE_WAITING_ON_POOL,
+                        JOB_RUNS_LONGER -> { }
+            }
+        }
     }
 }

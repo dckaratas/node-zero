@@ -4,19 +4,19 @@ threat:
   id: nightly-report-job
   name: { en: "Night Ledger", tr: "Gece Defteri" }
   chapter: 1
+  persists: true   # the cron job runs every day
   trigger:
     wave: 5
     event: cron
     schedule: { cron: "0 3 * * *", timezone: station }
   data: { table: orders, initial_rows: 1500000, rows_per_second: 0 }
-  job: { rows_per_minute: 50000 }
+  job: { rows_per_minute: 50000, io_rps: 100, io_service_time_ms: 8 }
   traffic:
     baseline_rps: 120
     shape:
       - { phase: plateau, duration_s: 120, multiplier: 1.0 }
     mix: { read: 0.7, write: 0.3 }
   consumes:
-    - { resource: db_io, model: utilization, service_time_ms: 8 }
     - { resource: db_pool, model: occupancy, hold_time_ms: 60000, slots: 8 }
   effects:
     - { when: "rho >= 0.9", effect: io_saturation, visual: archive_glow_red }

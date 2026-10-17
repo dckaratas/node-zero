@@ -23,7 +23,8 @@ class GameTest {
 
     @BeforeAll
     static void setUp() {
-        game = Game.chapterOne();
+        // Practice balance: waves play out fully, so the tests can observe the physics of a whole wave.
+        game = Game.chapterOne(GameBalance.PRACTICE);
     }
 
     /** Starts {@code wave} at tick 1 and runs until {@code untilTick}. */
