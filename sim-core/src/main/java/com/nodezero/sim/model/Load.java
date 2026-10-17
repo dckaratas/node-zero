@@ -6,7 +6,7 @@ package com.nodezero.sim.model;
  *
  * <p>Self-typed ({@code L extends Load<L>}) so updates keep the concrete type without casts.
  */
-public sealed interface Load<L extends Load<L>> permits RateLoad, HoldLoad {
+public sealed interface Load<L extends Load<L>> permits RateLoad, HoldLoad, FlowLoad {
 
     double arrivalRps();
 

@@ -18,8 +18,9 @@ Detaylar: [docs/GDD.md](docs/GDD.md) · Kararlar: [docs/adr/](docs/adr/) · Öğ
    Ertelenen sorular `docs/learning-notes.md` → "Ertelenen sorular" bölümünde.
 5. Yeni tehdit eklerken kaynak modelini (utilization/occupancy/fill) **önce kullanıcıya sor** (önemli karar sayılır).
 
-## Kullanıcının yazacağı parçalar (implementasyon YAZMA, sadece test + ipucu)
-- `sim-core` → `FillModel`
+## Kod sahipliği
+- Kodu Claude yazar (2026-10-17: kullanıcı FillModel'i de Claude'a devretti). Kullanıcıya parça atanmaz;
+  ileride istenirse önce parçanın oyundaki amacı (neden) anlatılır.
 
 ## Teknik kurallar (sim-core)
 - Java 21, Maven (`./mvnw`), JUnit 5, AssertJ, Jackson YAML. **Spring yok.**
@@ -43,6 +44,6 @@ NODE-01: 4 çekirdek × μ=50 rps (S=20 ms), Tomcat maxThreads=200 / acceptCount
 - Golden master yenile (formül **bilerek** değiştiyse, diff'i incele): `./mvnw test -Dtest=GoldenMasterTest -Dgolden.update=true`
 
 ## Yol haritası
-0 repo ✅ · 1 sim-core (1a utilization+engine ✅, 1b occupancy ✅, 1c fill—kullanıcı) · 2 YAML içerik ·
+0 repo ✅ · 1 sim-core (1a utilization+engine ✅, 1b occupancy ✅, 1c fill ✅) · 2 YAML içerik ·
 3 dalga/hata bütçesi/komutlar/sis · 4 Spring Boot + WebSocket · 5 TS/PixiJS istemci ·
 6 postmortem/kodeks/i18n · 7 canlıya alma + oyunun kendini izlemesi.
