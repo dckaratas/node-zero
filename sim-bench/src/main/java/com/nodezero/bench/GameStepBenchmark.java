@@ -3,6 +3,7 @@ package com.nodezero.bench;
 import com.nodezero.sim.engine.Command;
 import com.nodezero.sim.engine.Game;
 import com.nodezero.sim.engine.GameBalance;
+import com.nodezero.sim.engine.Observation;
 import com.nodezero.sim.state.GameState;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -41,8 +42,12 @@ public class GameStepBenchmark {
     public void setUp() {
         game = Game.chapterOne(GameBalance.PRACTICE);
         GameState s = game.newState(42);
-        for (long tick = 1; tick <= 600; tick++) {
-            s = game.step(s, tick == 1 && wave > 0 ? List.of(new Command.StartWave(wave)) : List.of(), tick);
+        // Full monitoring, so observe() builds every metric.
+        s = game.step(s, List.of(new Command.ApplyCounter("prometheus")), 1);
+        s = game.step(s, List.of(new Command.ApplyCounter("postgres-exporter")), 2);
+        s = game.step(s, List.of(new Command.ApplyCounter("grafana")), 3);
+        for (long tick = 4; tick <= 700; tick++) {
+            s = game.step(s, tick == 100 && wave > 0 ? List.of(new Command.StartWave(wave)) : List.of(), tick);
         }
         midWave = s;
     }
@@ -50,5 +55,11 @@ public class GameStepBenchmark {
     @Benchmark
     public GameState step() {
         return game.step(midWave, List.of(), midWave.tick() + 1);
+    }
+
+    /** Fog-of-war view a session sends with each snapshot (slice 4). */
+    @Benchmark
+    public Observation observe() {
+        return game.observe(midWave);
     }
 }

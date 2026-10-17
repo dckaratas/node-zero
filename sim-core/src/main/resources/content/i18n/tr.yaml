@@ -42,3 +42,6 @@ tradeoff.reschedule_job: "Bedava ve etkili; tabii kullanıcılarının ne zaman 
 tradeoff.batch_chunking: "Küçük ve yavaşlatılmış parçalar I/O'yu adil paylaşır; job daha uzun sürer."
 tradeoff.bulkhead_pool: "Job kendi küçük havuzunu alır ve artık kullanıcıları aç bırakamaz."
 tradeoff.naive_retry: "Backoff'suz tekrar deneme, zaten zorlanan veritabanının yükünü ikiye katlar."
+tradeoff.prometheus: "Sisi kaldırır: CPU, thread, havuz ve disk için ham metrikler. Her dalga bakım maliyeti var."
+tradeoff.postgres_exporter: "Veritabanı metrikleri ve pg_stat_statements: hangi sorgunun can yaktığını sonunda görürsün."
+tradeoff.grafana: "Paneller metrikleri cevaba çevirir: gecikme, hata oranı, tahminler, trafik ısı haritası."

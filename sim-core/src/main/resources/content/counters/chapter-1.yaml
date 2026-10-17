@@ -1,5 +1,40 @@
 # Chapter 1 counter-measures. Effects are declarative; the wave engine (slice 3) interprets them.
 counters:
+  # --- monitoring: lifts the fog of war (slice 3c) ---
+  - id: prometheus
+    name: { en: "Sensor Array", tr: "Sensör Dizisi" }
+    real_tech: "Prometheus + Micrometer"
+    cost: { credits: 200, upkeep_per_wave: 10 }
+    toil: 0
+    apply_time_s: 5
+    effect: { type: enable_prometheus }
+    tradeoff_key: tradeoff.prometheus
+    codex: [prometheus, use-method]
+
+  - id: postgres-exporter
+    name: { en: "Archive Sensors", tr: "Arşiv Sensörleri" }
+    real_tech: "postgres_exporter + pg_stat_statements"
+    cost: { credits: 100, upkeep_per_wave: 5 }
+    toil: 1
+    apply_time_s: 3
+    requires_counters: [prometheus]
+    grants_insights: [pg-stat-statements]
+    effect: { type: enable_postgres_exporter }
+    tradeoff_key: tradeoff.postgres_exporter
+    codex: [pg-stat-statements]
+
+  - id: grafana
+    name: { en: "Command Display", tr: "Komuta Ekranı" }
+    real_tech: "Grafana"
+    cost: { credits: 150, upkeep_per_wave: 10 }
+    toil: 0
+    apply_time_s: 5
+    requires_counters: [prometheus]
+    grants_insights: [traffic-heatmap]
+    effect: { type: enable_grafana }
+    tradeoff_key: tradeoff.grafana
+    codex: [dashboards, traffic-heatmap]
+
   # --- log-storm ---
   - id: log-level-info
     name: { en: "Set log level to INFO", tr: "Log seviyesini INFO yap" }

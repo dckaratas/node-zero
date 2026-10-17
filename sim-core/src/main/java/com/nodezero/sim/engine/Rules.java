@@ -99,12 +99,27 @@ public final class Rules {
 
     private void checkThreats(List<String> problems) {
         for (ThreatDef threat : content.threats().values()) {
+            checkMetrics(threat, threat.visibility().prometheus(), false, problems);
+            checkMetrics(threat, threat.visibility().grafana(), true, problems);
             for (ThreatDef.Consumption c : threat.consumes()) {
                 ResourceModel<?, ?> model = station.models().get(c.resource());
                 if (model != null && kindOf(model) != c.model()) {
                     problems.add("threat " + threat.id() + ": " + c.resource() + " is "
                             + kindOf(model) + " in the station, not " + c.model());
                 }
+            }
+        }
+    }
+
+    /** Content may only name metrics the catalog has, under the right section (raw vs. panel). */
+    private static void checkMetrics(ThreatDef threat, List<String> names, boolean panels, List<String> problems) {
+        for (String name : names) {
+            Metric metric = Metric.byName(name);
+            if (metric == null) {
+                problems.add("threat " + threat.id() + ": unknown metric '" + name + "'");
+            } else if (metric.tier().isPanel() != panels) {
+                problems.add("threat " + threat.id() + ": '" + name + "' belongs under "
+                        + (metric.tier().isPanel() ? "grafana" : "prometheus"));
             }
         }
     }
@@ -148,7 +163,7 @@ public final class Rules {
                 return;
             }
         }
-        if (kind.needsValue() && spec.value() == null) {
+        if (kind.needsValue && spec.value() == null) {
             problems.add("counter " + counterId + ": " + spec.type() + " needs a value");
             return;
         }

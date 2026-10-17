@@ -49,4 +49,5 @@ W   = S + Wq
   DB gecikmesi `min(Erlang-C, max(S, poolSize / X))` ile sınırlanır ve aynı tick'te hesaplanır. Açık kuyruk formülü
   tek başına kullanılınca bir tick'lik gecikmeli geri besleme salınım üretmişti (DB CPU %7 ↔ %120).
   Bilinen sınırlama: `DB_CPU` kaynağının kendi gösterdiği gecikme hâlâ açık kuyruk değeridir.
+- Sis perdesi (Dilim 3c): `latency_p99` paneli üstel kuyruk yaklaşımıyla `ln(100) × ortalama` gösterir; kesin değildir.
 - Takip: p99 için ileride `P(W > t) = C·e^{−(cμ−λ)t}` kullanılabilir (`StrictMath.exp` ile).

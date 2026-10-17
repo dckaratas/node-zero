@@ -19,12 +19,14 @@ public final class Game {
     private final Pipeline pipeline;
     private final Waves waves;
     private final Counters counters;
+    private final Observer observer;
 
     public Game(Rules rules) {
         this.rules = rules;
         this.pipeline = new Pipeline(rules);
         this.waves = new Waves(rules);
         this.counters = new Counters(rules);
+        this.observer = new Observer(rules);
     }
 
     /** NODE-01 with the shipped content. */
@@ -64,6 +66,11 @@ public final class Game {
         Plan plan = pipeline.plan(s, tick);
         s = Simulation.advance(s, plan.demands(), tick);
         return waves.account(s, plan, tick);
+    }
+
+    /** The player's view of {@code state}: only what their monitoring can see (fog of war). */
+    public Observation observe(GameState state) {
+        return observer.observe(state);
     }
 
     private static List<Command> append(List<Command> list, Command command) {

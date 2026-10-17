@@ -244,7 +244,8 @@ final class Pipeline {
                 case DOWNTIME -> cpuDown = true;
                 case WRITE_LOCK -> writeLocked = true;
                 case EXTRA_LOAD -> ioLoadFactor *= 1 + e.value();
-                case ADD_SERVERS, ADD_SLOTS, SCALE_CAPACITY, RETRY_FAILED, REJECT_WITH_STATUS, LESS_DEBUG_CONTEXT,
+                case ADD_SERVERS, ADD_SLOTS, SCALE_CAPACITY, ENABLE_PROMETHEUS, ENABLE_POSTGRES_EXPORTER, ENABLE_GRAFANA,
+                        RETRY_FAILED, REJECT_WITH_STATUS, LESS_DEBUG_CONTEXT,
                         SHORTER_LOG_HISTORY, PROBLEM_POSTPONED, FAILED_QUERIES, MORE_WAITING_ON_POOL,
                         JOB_RUNS_LONGER -> { }
             }

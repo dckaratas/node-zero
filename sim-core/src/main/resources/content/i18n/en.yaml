@@ -42,3 +42,6 @@ tradeoff.reschedule_job: "Free and effective, if you know when your users are bu
 tradeoff.batch_chunking: "Smaller, throttled chunks share I/O fairly; the job takes longer."
 tradeoff.bulkhead_pool: "The job gets its own small pool and can no longer starve users."
 tradeoff.naive_retry: "Retrying without backoff doubles the load on a database that is already struggling."
+tradeoff.prometheus: "Lifts the fog: raw metrics for CPU, threads, pools and disk. Costs upkeep every wave."
+tradeoff.postgres_exporter: "Database metrics and pg_stat_statements: you can finally see which query hurts."
+tradeoff.grafana: "Dashboards turn metrics into answers: latency, error rate, forecasts, the traffic heatmap."

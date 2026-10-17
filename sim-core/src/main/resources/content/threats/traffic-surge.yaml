@@ -24,7 +24,7 @@ threat:
   visibility:
     without_monitoring: { signal: user_complaints, delay_s: 30 }
     prometheus: [cpu_utilization, request_rate]
-    grafana: [latency_avg, error_rate, dashboards]
+    grafana: [latency_avg, error_rate]
   counters: [vertical-scale-cpu, nginx-rate-limit]
   locked_counters:
     - { id: load-balancer, unlocks_in_chapter: 3, hint_key: hint.lb_needs_two_nodes }

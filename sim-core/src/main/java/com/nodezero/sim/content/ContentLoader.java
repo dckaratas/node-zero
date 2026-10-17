@@ -95,6 +95,15 @@ public final class ContentLoader {
                 .filter(c -> c.betterAlternative() != null && !counters.containsKey(c.betterAlternative()))
                 .forEach(c -> problems.add(
                         "counter " + c.id() + ": unknown better_alternative '" + c.betterAlternative() + "'"));
+        counters.values().forEach(c -> c.requiresCounters().stream()
+                .filter(id -> !counters.containsKey(id))
+                .forEach(id -> problems.add("counter " + c.id() + ": unknown requires_counters '" + id + "'")));
+        // Every insight a counter requires must be obtainable from some other counter.
+        counters.values().stream()
+                .filter(c -> c.requiresInsight() != null)
+                .filter(c -> counters.values().stream().noneMatch(g -> g.grantsInsights().contains(c.requiresInsight())))
+                .forEach(c -> problems.add(
+                        "counter " + c.id() + ": no counter grants insight '" + c.requiresInsight() + "'"));
     }
 
     private static void checkTexts(

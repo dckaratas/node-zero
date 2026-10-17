@@ -22,7 +22,7 @@ class ChapterOneContentTest {
         assertThat(content.threats().keySet())
                 .containsExactly("log-storm", "traffic-surge", "slow-endpoint", "nightly-report-job");
         assertThat(content.threats().values()).allMatch(t -> t.chapter() == 1);
-        assertThat(content.counters()).hasSize(12);
+        assertThat(content.counters()).hasSize(15);
     }
 
     @Test

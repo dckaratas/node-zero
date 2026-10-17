@@ -10,6 +10,7 @@ package com.nodezero.sim.state;
  * @param requests requests that arrived so far
  * @param failedRequests requests that failed or breached the latency SLO so far
  * @param lastFailedRps failure rate of the previous tick (retries react to it)
+ * @param symptomSinceTick first tick of the current uninterrupted run of failures, or -1 (user complaints)
  */
 public record WaveState(
         int number,
@@ -19,7 +20,8 @@ public record WaveState(
         double expectedRequests,
         double requests,
         double failedRequests,
-        double lastFailedRps) {
+        double lastFailedRps,
+        long symptomSinceTick) {
 
     public enum Phase {
         PREPARATION,
@@ -28,7 +30,7 @@ public record WaveState(
         FAILED
     }
 
-    public static final WaveState PREPARATION = new WaveState(0, 0, Phase.PREPARATION, 0, 0, 0, 0, 0);
+    public static final WaveState PREPARATION = new WaveState(0, 0, Phase.PREPARATION, 0, 0, 0, 0, 0, -1);
 
     public WaveState {
         if (number < 0) {
@@ -40,7 +42,7 @@ public record WaveState(
     }
 
     public static WaveState running(int number, long startTick, double durationS, double expectedRequests) {
-        return new WaveState(number, startTick, Phase.RUNNING, durationS, expectedRequests, 0, 0, 0);
+        return new WaveState(number, startTick, Phase.RUNNING, durationS, expectedRequests, 0, 0, 0, -1);
     }
 
     /** Shield energy in [0, 1]: the share of the error budget still unspent. */
@@ -49,12 +51,14 @@ public record WaveState(
         return allowance <= 0 ? 1 : Math.clamp(1 - failedRequests / allowance, 0, 1);
     }
 
-    public WaveState record(double arrived, double failed, double failedRps) {
+    public WaveState record(double arrived, double failed, double failedRps, long tick) {
+        long since = failedRps <= 0 ? -1 : (symptomSinceTick < 0 ? tick : symptomSinceTick);
         return new WaveState(number, startTick, phase, durationS, expectedRequests,
-                requests + arrived, failedRequests + failed, failedRps);
+                requests + arrived, failedRequests + failed, failedRps, since);
     }
 
     public WaveState in(Phase newPhase) {
-        return new WaveState(number, startTick, newPhase, durationS, expectedRequests, requests, failedRequests, 0);
+        return new WaveState(number, startTick, newPhase, durationS, expectedRequests,
+                requests, failedRequests, 0, -1);
     }
 }

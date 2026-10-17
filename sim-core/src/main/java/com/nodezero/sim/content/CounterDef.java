@@ -18,6 +18,8 @@ public record CounterDef(
         List<ConfigParam> config,
         List<CounterOption> options,
         String requiresInsight,
+        List<String> requiresCounters,
+        List<String> grantsInsights,
         EffectSpec effect,
         List<EffectSpec> sideEffect,
         String tradeoffKey,
@@ -36,6 +38,10 @@ public record CounterDef(
         if (requiresInsight != null) {
             Require.id(requiresInsight, "requires_insight");
         }
+        requiresCounters = Require.orEmpty(requiresCounters);
+        requiresCounters.forEach(c -> Require.id(c, "requires_counters[]"));
+        grantsInsights = Require.orEmpty(grantsInsights);
+        grantsInsights.forEach(i -> Require.id(i, "grants_insights[]"));
         Require.present(effect, "effect");
         sideEffect = Require.orEmpty(sideEffect);
         Require.textKey(tradeoffKey, "tradeoff_key");

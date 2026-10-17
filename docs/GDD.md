@@ -62,6 +62,20 @@ Hazırlık ──► Dalga ──► Postmortem ──► Araştırma ──┐
 Etki türleri Java'da (`EffectKind`): parametre değiştirenler, donanım değiştirenler (çekirdek/thread/disk ekleme),
 sadece kurulumda zarar verenler ve anlatısal olanlar. YAML bilinmeyen tür kullanırsa kurallar yüklenmez.
 
+### Sis perdesi (Dilim 3c)
+Simülasyon her şeyi hesaplar; oyuncuya sunucuda filtrelenmiş bir `Observation` gider (istemci gizli veriyi hiç görmez).
+
+| Modül | Maliyet | Gerekir | Açar |
+|---|---|---|---|
+| Hiçbiri | — | — | Kalkan + gecikmeli kullanıcı şikâyeti (`delay_s` boyunca hata sürerse) |
+| Sensör Dizisi (Prometheus) | 200 kr, 5 sn | — | `request_rate`, `cpu_utilization`, `tomcat_threads_busy`, `hikaricp_connections_*`, `disk_usage_ratio`, `disk_fill_rate` |
+| Arşiv Sensörleri (postgres_exporter) | 100 kr, 3 sn | Prometheus | `db_cpu_utilization`, `db_io_utilization` + teşhis `pg-stat-statements` |
+| Komuta Ekranı (Grafana) | 150 kr, 5 sn | Prometheus | `latency_avg`, `latency_p99`, `error_rate`, `disk_forecast`, `traffic_heatmap` + teşhis `traffic-heatmap` |
+| Grafana + exporter | — | ikisi | `slow_queries` |
+
+Kurallar: tehdit YAML'ındaki her metrik katalogda olmalı ve doğru bölümde durmalı (ham metrik `prometheus:`, panel `grafana:`).
+Görünüm hiçbir zaman tehdit kimliği veya kök neden içermez (testle korunur).
+
 ### Temel mekanikler
 | Mekanik | Gerçek dünya karşılığı |
 |---|---|

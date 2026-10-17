@@ -33,6 +33,11 @@ final class Counters {
         if (p.isInstalled(def.id())) {
             throw new IllegalArgumentException("counter " + def.id() + " is already installed");
         }
+        for (String required : def.requiresCounters()) {
+            if (!p.isInstalled(required)) {
+                throw new IllegalArgumentException("counter " + def.id() + " needs " + required + " installed first");
+            }
+        }
         if (def.requiresInsight() != null && !p.insights().contains(def.requiresInsight())) {
             throw new IllegalArgumentException("counter " + def.id() + " needs insight " + def.requiresInsight());
         }
@@ -47,14 +52,22 @@ final class Counters {
         return s.withProgress(p.withCredits(p.credits() - cost).withCounter(installed));
     }
 
-    /** Applies structural effects (more cores, threads, disk) of counters that become active this tick. */
+    /**
+     * Counters that become active this tick: grant their insights (monitoring reveals what it measures)
+     * and apply structural effects (more cores, threads, disk).
+     */
     GameState activate(GameState s, long tick) {
         EnumMap<ResourceId, ResourceNode<?, ?>> nodes = null;
+        Progress progress = s.progress();
         for (InstalledCounter installed : s.progress().counters()) {
             if (installed.activeTick() != tick) {
                 continue;
             }
-            for (Rules.Effect e : rules.counter(installed.id()).variant(installed.option()).effects()) {
+            Rules.CounterRules counter = rules.counter(installed.id());
+            for (String insight : counter.def().grantsInsights()) {
+                progress = progress.withInsight(insight);
+            }
+            for (Rules.Effect e : counter.variant(installed.option()).effects()) {
                 if (e.kind().timing != EffectKind.Timing.STRUCTURAL) {
                     continue;
                 }
@@ -65,7 +78,8 @@ final class Counters {
                 nodes.put(e.target(), upgrade(nodes.get(e.target()), e));
             }
         }
-        return nodes == null ? s : s.withResources(nodes);
+        GameState upgraded = nodes == null ? s : s.withResources(nodes);
+        return progress == s.progress() ? upgraded : upgraded.withProgress(progress);
     }
 
     private static ResourceNode<?, ?> upgrade(ResourceNode<?, ?> node, Rules.Effect e) {

@@ -68,7 +68,8 @@ final class Waves {
         }
         failedRps = Math.min(failedRps, plan.arrivalsRps());
 
-        WaveState booked = wave.record(plan.arrivalsRps() * SimConstants.DT, failedRps * SimConstants.DT, failedRps);
+        WaveState booked = wave.record(
+                plan.arrivalsRps() * SimConstants.DT, failedRps * SimConstants.DT, failedRps, tick);
         if (balance.endWaveOnEmptyShield() && booked.shield(balance.slo()) <= 0) {
             return s.withProgress(p.withWave(booked.in(WaveState.Phase.FAILED)));
         }

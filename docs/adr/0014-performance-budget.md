@@ -42,3 +42,10 @@ açık bir gereksinim olarak koydu.
 | Sakin istasyon | 1.4 | 2232 |
 | Dalga 3 | 1.5 | 2656 |
 | Dalga 4 | 1.4 | 2680 |
+
+### Ölçüm (2026-10-17, Dilim 3c sonrası: üç izleme modülü kurulu)
+| Senaryo | `step` µs | `step` B | `observe` µs | `observe` B |
+|---|---|---|---|---|
+| Sakin istasyon | 1.5 | 2320 | 0.5 | 2416 |
+| Dalga 3 | 1.6 | 2720 | 0.4 | 2440 |
+| Dalga 4 | 1.6 | 2752 | 0.5 | 2440 |
