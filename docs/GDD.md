@@ -120,6 +120,21 @@ Bir kaynak birden fazla modelde olabilir (disk: alan = fill, I/O = utilization).
 | 5 | `nightly-report-job` "Gece Defteri" | utilization (DB I/O) + occupancy (Hikari 8/10) | Cron `0 3 * * *` istasyon saati = Europa'da 15:00 (yoğun saat). Süre rows/50k dk | Zamanlamayı değiştir (heatmap gerekir), Spring Batch chunking + throttle, bulkhead (job için ayrı pool=2), **tuzak: naive retry (yük ×2)**. Read replica kilitli (Bölüm 3) | Job, kullanıcı trafiğiyle aynı kaynakları paylaştı ve yoğun saate denk geldi |
 
 ## 8. İçerik şeması
+Dosyalar `sim-core/src/main/resources/content/` altında; yükleme sırası `index.yaml`'da.
+Kurallar (yükleyici zorlar):
+
+| Kural | Örnek hata |
+|---|---|
+| Bilinmeyen alan yok | `threat.colour: unknown field 'colour'` |
+| Modele göre zorunlu alan | utilization → `service_time_ms`, occupancy → `hold_time_ms`, fill → `units_per_request` |
+| Koşul sözdizimi `metrik op sayı/metrik` | `rho >> 0.9` reddedilir |
+| Postmortem'de tam 1 doğru seçenek | |
+| id = dosya adı; counter referansları çözülmeli | `unknown counter 'magic-fix'` |
+| Her metin anahtarı EN ve TR'de var, kullanılmayan anahtar yok | `missing TR text for 'pm.x'` |
+
+Opsiyonel alanlar: `data` (tablo büyümesi; `per_row_ms` için gerekli), `job` (batch süresi),
+`trigger.schedule` (cron + saat dilimi), `consumes[].slots` (job'ın tuttuğu bağlantı sayısı).
+
 ### Tehdit (`content/threats/*.yaml`)
 ```yaml
 threat:
@@ -134,7 +149,8 @@ threat:
       - { phase: plateau, duration_s: 60, multiplier: 3.0 }
       - { phase: decay,   duration_s: 40, multiplier: "3.0 -> 1.0" }
     mix: { read: 0.8, write: 0.2 }
-  consumes: { resource: cpu, model: utilization, service_time_ms: 20 }
+  consumes:   # liste: bir tehdit birden fazla kaynağı tüketebilir
+    - { resource: cpu, model: utilization, service_time_ms: 20 }
   effects:
     - { when: "rho >= 0.7", effect: latency_rise,    visual: reactor_glow_orange }
     - { when: "rho >= 0.9", effect: slo_breach_risk, visual: reactor_glow_red }

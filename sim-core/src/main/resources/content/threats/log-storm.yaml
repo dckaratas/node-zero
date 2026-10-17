@@ -1,0 +1,31 @@
+# Wave 2: a deploy left DEBUG logging on. Invisible without Prometheus until writes start failing.
+threat:
+  id: log-storm
+  name: { en: "Log Storm", tr: "Log Fırtınası" }
+  chapter: 1
+  trigger: { wave: 2, event: deploy }
+  traffic:
+    baseline_rps: 200
+    shape:
+      - { phase: plateau, duration_s: 120, multiplier: 1.0 }
+    mix: { read: 0.8, write: 0.2 }
+  consumes:
+    # 2 KB of DEBUG log per request, in MB
+    - { resource: disk, model: fill, units_per_request: 0.002 }
+  effects:
+    - { when: "fill_ratio >= 0.8", effect: disk_pressure, visual: cargo_hold_amber }
+    - { when: "fill_ratio >= 1.0", effect: write_failures, visual: cargo_hold_red }
+  visibility:
+    without_monitoring: { signal: write_errors, delay_s: 60 }
+    prometheus: [disk_usage_ratio, disk_fill_rate]
+    grafana: [disk_forecast]
+  counters: [log-level-info, logrotate, expand-disk]
+  postmortem:
+    question_key: pm.log_storm.q
+    options:
+      - { id: a, key: pm.log_storm.disk_too_small }
+      - { id: b, key: pm.log_storm.wrong_log_level, correct: true }
+      - { id: c, key: pm.log_storm.traffic_spike }
+      - { id: d, key: pm.log_storm.disk_hardware }
+    reward: { unlock: log-level-guard }
+  codex: [fill-model, log-levels, logrotate, predict-linear]

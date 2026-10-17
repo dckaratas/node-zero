@@ -1,0 +1,180 @@
+# Chapter 1 counter-measures. Effects are declarative; the wave engine (slice 3) interprets them.
+counters:
+  # --- log-storm ---
+  - id: log-level-info
+    name: { en: "Set log level to INFO", tr: "Log seviyesini INFO yap" }
+    real_tech: "Logback root logger level"
+    cost: { credits: 0, upkeep_per_wave: 0 }
+    toil: 2
+    apply_time_s: 2
+    effect: { type: set_units_per_request, target: disk, value: 0.0002 }
+    side_effect:
+      - { type: less_debug_context }
+    tradeoff_key: tradeoff.log_level_info
+    codex: [log-levels]
+
+  - id: logrotate
+    name: { en: "logrotate", tr: "logrotate" }
+    real_tech: "logrotate"
+    cost: { credits: 150, upkeep_per_wave: 10 }
+    toil: 0
+    apply_time_s: 5
+    config:
+      - { key: keep_days, value: 7, min: 1, max: 30, player_editable: true }
+    effect: { type: add_drain, target: disk, value: 0.3 }
+    side_effect:
+      - { type: shorter_log_history }
+    tradeoff_key: tradeoff.logrotate
+    codex: [logrotate]
+
+  - id: expand-disk
+    name: { en: "Expand cargo hold", tr: "Kargo ambarını büyüt" }
+    real_tech: "Volume resize"
+    cost: { credits: 300, upkeep_per_wave: 20 }
+    toil: 0
+    apply_time_s: 10
+    effect: { type: scale_capacity, target: disk, value: 2.0 }
+    side_effect:
+      - { type: problem_postponed, target: disk }
+    tradeoff_key: tradeoff.expand_disk
+    better_alternative: log-level-info
+    codex: [fill-model]
+
+  # --- traffic-surge ---
+  - id: vertical-scale-cpu
+    name: { en: "Reactor upgrade", tr: "Reaktör yükseltmesi" }
+    real_tech: "Vertical scaling (+4 cores)"
+    cost: { credits: 400, upkeep_per_wave: 40 }
+    toil: 1
+    apply_time_s: 5
+    effect: { type: add_servers, target: cpu, value: 4 }
+    side_effect:
+      - { type: downtime, target: cpu, value: 5 }
+    tradeoff_key: tradeoff.vertical_scale_cpu
+    codex: [vertical-vs-horizontal]
+
+  - id: nginx-rate-limit
+    name: { en: "Nginx rate limit", tr: "Nginx hız sınırı" }
+    real_tech: "Nginx limit_req"
+    cost: { credits: 100, upkeep_per_wave: 5 }
+    toil: 0
+    apply_time_s: 2
+    config:
+      - { key: rate_rps, value: 150, min: 50, max: 400, player_editable: true }
+    effect: { type: rate_limit, target: cpu, value: 150 }
+    side_effect:
+      - { type: reject_with_status, value: 429 }
+    tradeoff_key: tradeoff.nginx_rate_limit
+    codex: [rate-limiting, http-429-vs-503]
+
+  # --- slow-endpoint ---
+  - id: statement-timeout
+    name: { en: "Statement timeout", tr: "Sorgu zaman aşımı" }
+    real_tech: "PostgreSQL statement_timeout"
+    cost: { credits: 50, upkeep_per_wave: 0 }
+    toil: 0
+    apply_time_s: 1
+    config:
+      - { key: timeout_ms, value: 2000, min: 100, max: 30000, player_editable: true }
+    effect: { type: cap_hold_time, target: db_pool, value: 2000 }
+    side_effect:
+      - { type: failed_queries, target: db_pool }
+    tradeoff_key: tradeoff.statement_timeout
+    better_alternative: create-index
+    codex: [statement-timeout]
+
+  - id: create-index
+    name: { en: "Create index", tr: "İndeks oluştur" }
+    real_tech: "PostgreSQL CREATE INDEX"
+    cost: { credits: 200, upkeep_per_wave: 0 }
+    toil: 1
+    apply_time_s: 30
+    requires_insight: pg-stat-statements
+    options:
+      - id: blocking
+        name: { en: "CREATE INDEX", tr: "CREATE INDEX (kilitli)" }
+        apply_time_s: 10
+        side_effect:
+          - { type: write_lock, target: db_pool, value: 10 }
+        tradeoff_key: tradeoff.create_index_blocking
+      - id: concurrently
+        name: { en: "CREATE INDEX CONCURRENTLY", tr: "CREATE INDEX CONCURRENTLY" }
+        apply_time_s: 40
+        side_effect:
+          - { type: extra_load, target: db_io, value: 0.2 }
+        tradeoff_key: tradeoff.create_index_concurrently
+    effect: { type: set_per_row_ms, target: db_pool, value: 0 }
+    tradeoff_key: tradeoff.create_index
+    codex: [db-indexes, create-index-concurrently]
+
+  - id: raise-max-threads
+    name: { en: "Raise maxThreads", tr: "maxThreads artır" }
+    real_tech: "Tomcat maxThreads"
+    cost: { credits: 50, upkeep_per_wave: 0 }
+    toil: 0
+    apply_time_s: 3
+    config:
+      - { key: max_threads, value: 400, min: 200, max: 800, player_editable: true }
+    effect: { type: add_slots, target: threads, value: 200 }
+    side_effect:
+      - { type: more_waiting_on_pool, target: db_pool }
+    tradeoff_key: tradeoff.raise_max_threads
+    better_alternative: create-index
+    codex: [tomcat-threads, use-method]
+
+  # --- nightly-report-job ---
+  - id: reschedule-job
+    name: { en: "Reschedule the job", tr: "Job'ı yeniden zamanla" }
+    real_tech: "Cron with explicit time zone"
+    cost: { credits: 0, upkeep_per_wave: 0 }
+    toil: 1
+    apply_time_s: 1
+    requires_insight: traffic-heatmap
+    config:
+      - { key: station_hour, value: 15, min: 0, max: 23, player_editable: true }
+    effect: { type: reschedule, value: 15 }
+    tradeoff_key: tradeoff.reschedule_job
+    codex: [cron-timezones]
+
+  - id: batch-chunking
+    name: { en: "Chunk and throttle", tr: "Parçala ve yavaşlat" }
+    real_tech: "Spring Batch chunk-oriented step"
+    cost: { credits: 250, upkeep_per_wave: 10 }
+    toil: 0
+    apply_time_s: 20
+    config:
+      - { key: chunk_size, value: 1000, min: 100, max: 10000, player_editable: true }
+      - { key: throttle_ms, value: 50, min: 0, max: 1000, player_editable: true }
+    effect: { type: throttle_job, target: db_io, value: 0.5 }
+    side_effect:
+      - { type: job_runs_longer }
+    tradeoff_key: tradeoff.batch_chunking
+    codex: [batch-chunking]
+
+  - id: bulkhead-pool
+    name: { en: "Bulkhead pool", tr: "Bölmeli havuz" }
+    real_tech: "Separate HikariCP pool for the job"
+    cost: { credits: 150, upkeep_per_wave: 5 }
+    toil: 0
+    apply_time_s: 5
+    config:
+      - { key: job_pool_size, value: 2, min: 1, max: 5, player_editable: true }
+    effect: { type: isolate_slots, target: db_pool, value: 2 }
+    side_effect:
+      - { type: job_runs_longer }
+    tradeoff_key: tradeoff.bulkhead_pool
+    codex: [bulkhead]
+
+  # Trap: looks like a fix, doubles the load on a struggling database.
+  - id: naive-retry
+    name: { en: "Retry failed requests", tr: "Başarısız istekleri tekrar dene" }
+    real_tech: "Retry without backoff"
+    cost: { credits: 0, upkeep_per_wave: 0 }
+    toil: 0
+    apply_time_s: 1
+    effect: { type: retry_failed, target: db_pool, value: 1 }
+    side_effect:
+      - { type: load_multiplier, target: db_pool, value: 2 }
+    tradeoff_key: tradeoff.naive_retry
+    better_alternative: bulkhead-pool
+    codex: [retry-amplification]

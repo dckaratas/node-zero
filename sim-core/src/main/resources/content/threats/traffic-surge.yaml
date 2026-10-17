@@ -1,0 +1,39 @@
+# Wave 3: marketing ran a campaign without telling ops. Looks like DDoS, is not.
+threat:
+  id: traffic-surge
+  name: { en: "Colony Festival", tr: "Koloni Festivali" }
+  chapter: 1
+  trigger:
+    wave: 3
+    event: marketing-campaign
+    warning: { wave: 2, channel: comms, text_key: comms.festival_teaser }
+  traffic:
+    baseline_rps: 100
+    shape:
+      - { phase: ramp,    duration_s: 20, multiplier: "1.0 -> 3.0" }
+      - { phase: plateau, duration_s: 60, multiplier: 3.0 }
+      - { phase: decay,   duration_s: 40, multiplier: "3.0 -> 1.0" }
+    mix: { read: 0.8, write: 0.2 }
+  consumes:
+    - { resource: cpu, model: utilization, service_time_ms: 20 }
+  effects:
+    - { when: "rho >= 0.7", effect: latency_rise, visual: reactor_glow_orange }
+    - { when: "rho >= 0.9", effect: slo_breach_risk, visual: reactor_glow_red }
+    - { when: "rho >= 1.0", effect: queue_growth }
+    - { when: "queue >= accept_count", effect: reject_connections }
+  visibility:
+    without_monitoring: { signal: user_complaints, delay_s: 30 }
+    prometheus: [cpu_utilization, request_rate]
+    grafana: [latency_avg, error_rate, dashboards]
+  counters: [vertical-scale-cpu, nginx-rate-limit]
+  locked_counters:
+    - { id: load-balancer, unlocks_in_chapter: 3, hint_key: hint.lb_needs_two_nodes }
+  postmortem:
+    question_key: pm.traffic_surge.q
+    options:
+      - { id: a, key: pm.traffic_surge.slow_code }
+      - { id: b, key: pm.traffic_surge.capacity_not_planned, correct: true }
+      - { id: c, key: pm.traffic_surge.database }
+      - { id: d, key: pm.traffic_surge.ddos }
+    reward: { unlock: capacity-forecast-panel }
+  codex: [utilization-law, vertical-vs-horizontal, rate-limiting, http-429-vs-503, tomcat-threads]

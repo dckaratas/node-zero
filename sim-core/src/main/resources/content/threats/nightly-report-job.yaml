@@ -1,0 +1,39 @@
+# Wave 5: "0 3 * * *" in station time is 15:00 on Europa (+12 h), the colony's peak hour.
+# The job shares DB I/O and 8 of 10 Hikari connections with user traffic.
+threat:
+  id: nightly-report-job
+  name: { en: "Night Ledger", tr: "Gece Defteri" }
+  chapter: 1
+  trigger:
+    wave: 5
+    event: cron
+    schedule: { cron: "0 3 * * *", timezone: station }
+  data: { table: orders, initial_rows: 1500000, rows_per_second: 0 }
+  job: { rows_per_minute: 50000 }
+  traffic:
+    baseline_rps: 120
+    shape:
+      - { phase: plateau, duration_s: 120, multiplier: 1.0 }
+    mix: { read: 0.7, write: 0.3 }
+  consumes:
+    - { resource: db_io, model: utilization, service_time_ms: 8 }
+    - { resource: db_pool, model: occupancy, hold_time_ms: 60000, slots: 8 }
+  effects:
+    - { when: "rho >= 0.9", effect: io_saturation, visual: archive_glow_red }
+    - { when: "pending >= 1", effect: connection_wait, visual: docking_ports_amber }
+  visibility:
+    without_monitoring: { signal: user_complaints, delay_s: 30 }
+    prometheus: [db_io_utilization, hikaricp_connections_active]
+    grafana: [traffic_heatmap, latency_p99]
+  counters: [reschedule-job, batch-chunking, bulkhead-pool, naive-retry]
+  locked_counters:
+    - { id: read-replica, unlocks_in_chapter: 3, hint_key: hint.replica_needs_two_nodes }
+  postmortem:
+    question_key: pm.nightly_job.q
+    options:
+      - { id: a, key: pm.nightly_job.db_too_small }
+      - { id: b, key: pm.nightly_job.job_bug }
+      - { id: c, key: pm.nightly_job.shared_resources_peak_hour, correct: true }
+      - { id: d, key: pm.nightly_job.network }
+    reward: { unlock: traffic-heatmap-panel }
+  codex: [bulkhead, retry-amplification, cron-timezones, batch-chunking]

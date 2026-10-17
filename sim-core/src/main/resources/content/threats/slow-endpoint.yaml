@@ -1,0 +1,35 @@
+# Wave 4: orders passed 1M rows and an unindexed query slows down linearly.
+# Deceptive: app CPU looks idle (threads wait on the DB) while DB CPU is high.
+threat:
+  id: slow-endpoint
+  name: { en: "Archive Drift", tr: "Arşiv Kayması" }
+  chapter: 1
+  trigger: { wave: 4, event: data-growth }
+  data: { table: orders, initial_rows: 1000000, rows_per_second: 2000 }
+  traffic:
+    baseline_rps: 100
+    shape:
+      - { phase: plateau, duration_s: 120, multiplier: 1.0 }
+    mix: { read: 0.9, write: 0.1 }
+  consumes:
+    # hold = base + rows * per_row_ms (1M rows -> +2 s without an index)
+    - { resource: threads, model: occupancy, hold_time_ms: 30, per_row_ms: 0.002 }
+    - { resource: db_pool, model: occupancy, hold_time_ms: 20, per_row_ms: 0.002 }
+    - { resource: db_cpu, model: utilization, service_time_ms: 5, per_row_ms: 0.0005 }
+  effects:
+    - { when: "pending >= 1", effect: connection_wait, visual: docking_ports_amber }
+    - { when: "rejected_rps > 0", effect: request_failures, visual: docking_ports_red }
+  visibility:
+    without_monitoring: { signal: user_complaints, delay_s: 45 }
+    prometheus: [hikaricp_connections_pending, tomcat_threads_busy, cpu_utilization, db_cpu_utilization]
+    grafana: [latency_p99, slow_queries]
+  counters: [statement-timeout, create-index, raise-max-threads]
+  postmortem:
+    question_key: pm.slow_endpoint.q
+    options:
+      - { id: a, key: pm.slow_endpoint.app_cpu }
+      - { id: b, key: pm.slow_endpoint.too_few_threads }
+      - { id: c, key: pm.slow_endpoint.missing_index, correct: true }
+      - { id: d, key: pm.slow_endpoint.network }
+    reward: { unlock: slow-query-panel }
+  codex: [occupancy-model, littles-law, use-method, db-indexes, create-index-concurrently, statement-timeout]

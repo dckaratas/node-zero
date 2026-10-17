@@ -1,0 +1,11 @@
+# Load order is play order. Paths are relative to the content root.
+threats:
+  - threats/log-storm.yaml
+  - threats/traffic-surge.yaml
+  - threats/slow-endpoint.yaml
+  - threats/nightly-report-job.yaml
+counters:
+  - counters/chapter-1.yaml
+messages:
+  en: i18n/en.yaml
+  tr: i18n/tr.yaml

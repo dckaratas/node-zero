@@ -22,5 +22,8 @@ Yükleme Jackson YAML ile, yükleme anında şema doğrulamasıyla yapılır (Di
 ## Sonuçlar
 - Olumlu: İçerik koddan ayrık; topluluk katkısı mümkün.
 - Bedel: Koşullar (`"rho >= 0.9"`) için küçük, güvenli bir ifade ayrıştırıcı gerekir.
-- Takip: Şema doğrulama hataları dosya + satır numarasıyla raporlanmalı.
-- Not: YAML anahtarlarından enum'a çevirirken `Locale.ROOT` kullanılmalı (tr_TR "I" problemi).
+- Uygulama (Dilim 2): Jackson YAML → record'lar; kurallar compact constructor'larda, dosyalar arası
+  kurallar `ContentLoader`'da (hepsi tek raporda). Koşullar kendi ayrıştırıcımızla (`Condition`), ifade motoru yok.
+- Sınırlama: Jackson record alanlarını tamponladığı için hata satırı, alanın değil **kapsayan nesnenin bittiği** satırdır;
+  alan yolu (`threat.postmortem.options[1]`) kesindir.
+- Not: Enum eşlemesi `ACCEPT_CASE_INSENSITIVE_ENUMS` ile; karşılaştırma locale'den bağımsız (tr_TR testli).
