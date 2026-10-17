@@ -21,5 +21,13 @@
   },
   "signals" : [ ],
   "insights" : [ "traffic-heatmap" ],
-  "counters" : [ "prometheus", "grafana" ]
+  "counters" : [ {
+    "id" : "prometheus",
+    "option" : null,
+    "readyTick" : 51
+  }, {
+    "id" : "grafana",
+    "option" : null,
+    "readyTick" : 52
+  } ]
 }

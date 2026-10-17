@@ -12,10 +12,10 @@ function snapshot(tick: number, cpu: number, extra: Partial<Snapshot> = {}): Sna
 describe('GameStore', () => {
   it('keeps the lists a delta leaves out', () => {
     const store = new GameStore(200);
-    store.apply(snapshot(2, 0.5, { counters: ['prometheus'], insights: [] }), 0);
+    store.apply(snapshot(2, 0.5, { counters: [{ id: 'prometheus', option: null, readyTick: 51 }], insights: [] }), 0);
     const view = store.apply(snapshot(4, 0.6), 200);
 
-    expect(view.counters).toEqual(['prometheus']);
+    expect(view.counters.map((c) => c.id)).toEqual(['prometheus']);
     expect(view.insights).toEqual([]);
   });
 

@@ -1,0 +1,50 @@
+{
+  "language" : "en",
+  "counters" : [ {
+    "id" : "prometheus",
+    "name" : "Sensor Array",
+    "realTech" : "Prometheus + Micrometer",
+    "credits" : 200,
+    "upkeepPerWave" : 10,
+    "applyTimeS" : 5.0,
+    "requiresCounters" : [ ],
+    "requiresInsight" : null,
+    "grantsInsights" : [ ],
+    "tradeoff" : "Lifts the fog: raw metrics for CPU, threads, pools and disk. Costs upkeep every wave.",
+    "options" : [ ]
+  }, {
+    "id" : "grafana",
+    "name" : "Command Display",
+    "realTech" : "Grafana",
+    "credits" : 150,
+    "upkeepPerWave" : 10,
+    "applyTimeS" : 5.0,
+    "requiresCounters" : [ "prometheus" ],
+    "requiresInsight" : null,
+    "grantsInsights" : [ "traffic-heatmap" ],
+    "tradeoff" : "Dashboards turn metrics into answers: latency, error rate, forecasts, the traffic heatmap.",
+    "options" : [ ]
+  }, {
+    "id" : "create-index",
+    "name" : "Create index",
+    "realTech" : "PostgreSQL CREATE INDEX",
+    "credits" : 200,
+    "upkeepPerWave" : 0,
+    "applyTimeS" : 30.0,
+    "requiresCounters" : [ ],
+    "requiresInsight" : "pg-stat-statements",
+    "grantsInsights" : [ ],
+    "tradeoff" : "Fixes the root cause. Needs pg_stat_statements to find the query.",
+    "options" : [ {
+      "id" : "blocking",
+      "name" : "CREATE INDEX",
+      "applyTimeS" : 10.0,
+      "tradeoff" : "Fast to build, but blocks writes on the table while it runs."
+    }, {
+      "id" : "concurrently",
+      "name" : "CREATE INDEX CONCURRENTLY",
+      "applyTimeS" : 40.0,
+      "tradeoff" : "No write lock, but slower and adds database I/O while it builds."
+    } ]
+  } ]
+}

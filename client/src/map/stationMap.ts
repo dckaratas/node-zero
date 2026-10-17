@@ -50,6 +50,8 @@ export class StationMap {
     this.drawPipes();
     this.centre();
     this.app.renderer.on('resize', () => this.centre());
+    // resizeTo only listens to window resizes; the host also changes when a scrollbar appears.
+    new ResizeObserver(() => this.app.resize()).observe(host);
   }
 
   /** Called every frame with the interpolated view. */

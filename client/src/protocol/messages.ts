@@ -32,7 +32,42 @@ export interface Snapshot {
   metrics: Record<string, number>;
   signals: string[];
   insights?: string[];
-  counters?: string[];
+  counters?: InstalledCounter[];
+}
+
+/** A bought counter; it works from readyTick on and is being built before that. */
+export interface InstalledCounter {
+  id: string;
+  option: string | null;
+  readyTick: number;
+}
+
+/** GET /api/sessions/{id}/catalog: counters this session may see (insight-gated ones only once unlocked). */
+export interface Catalog {
+  language: string;
+  counters: CatalogItem[];
+}
+
+export interface CatalogItem {
+  id: string;
+  name: string;
+  realTech: string;
+  credits: number;
+  upkeepPerWave: number;
+  applyTimeS: number;
+  requiresCounters: string[];
+  requiresInsight: string | null;
+  grantsInsights: string[];
+  tradeoff: string;
+  options: CatalogOption[];
+}
+
+export interface CatalogOption {
+  id: string;
+  name: string;
+  /** Overrides the counter's build time when set. */
+  applyTimeS: number | null;
+  tradeoff: string;
 }
 
 export interface Rejected {
@@ -93,6 +128,54 @@ function metrics(v: unknown, path: string): Record<string, number> {
   return out;
 }
 
+function nullable<T>(v: unknown, path: string, parse: (v: unknown, path: string) => T): T | null {
+  return v === null ? null : parse(v, path);
+}
+
+function list<T>(v: unknown, path: string, parse: (v: unknown, path: string) => T): T[] {
+  if (!Array.isArray(v)) throw new ProtocolError(`${path}: expected array`);
+  return v.map((item, i) => parse(item, `${path}[${i}]`));
+}
+
+function installed(v: unknown, path: string): InstalledCounter {
+  const o = object(v, path);
+  keys(o, path, ['id', 'option', 'readyTick']);
+  return { id: str(o['id'], `${path}.id`), option: nullable(o['option'], `${path}.option`, str),
+    readyTick: num(o['readyTick'], `${path}.readyTick`) };
+}
+
+function catalogOption(v: unknown, path: string): CatalogOption {
+  const o = object(v, path);
+  keys(o, path, ['id', 'name', 'applyTimeS', 'tradeoff']);
+  return { id: str(o['id'], `${path}.id`), name: str(o['name'], `${path}.name`),
+    applyTimeS: nullable(o['applyTimeS'], `${path}.applyTimeS`, num), tradeoff: str(o['tradeoff'], `${path}.tradeoff`) };
+}
+
+function catalogItem(v: unknown, path: string): CatalogItem {
+  const o = object(v, path);
+  keys(o, path, ['id', 'name', 'realTech', 'credits', 'upkeepPerWave', 'applyTimeS', 'requiresCounters',
+    'requiresInsight', 'grantsInsights', 'tradeoff', 'options']);
+  return {
+    id: str(o['id'], `${path}.id`),
+    name: str(o['name'], `${path}.name`),
+    realTech: str(o['realTech'], `${path}.realTech`),
+    credits: num(o['credits'], `${path}.credits`),
+    upkeepPerWave: num(o['upkeepPerWave'], `${path}.upkeepPerWave`),
+    applyTimeS: num(o['applyTimeS'], `${path}.applyTimeS`),
+    requiresCounters: strings(o['requiresCounters'], `${path}.requiresCounters`),
+    requiresInsight: nullable(o['requiresInsight'], `${path}.requiresInsight`, str),
+    grantsInsights: strings(o['grantsInsights'], `${path}.grantsInsights`),
+    tradeoff: str(o['tradeoff'], `${path}.tradeoff`),
+    options: list(o['options'], `${path}.options`, catalogOption),
+  };
+}
+
+export function parseCatalog(v: unknown): Catalog {
+  const o = object(v, 'catalog');
+  keys(o, 'catalog', ['language', 'counters']);
+  return { language: str(o['language'], 'catalog.language'), counters: list(o['counters'], 'catalog.counters', catalogItem) };
+}
+
 export function parseAction(v: unknown, path = 'action'): ClientAction {
   const o = object(v, path);
   switch (o['type']) {
@@ -142,7 +225,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
         signals: strings(o['signals'], 'snapshot.signals'),
       };
       if (o['insights'] !== undefined) s.insights = strings(o['insights'], 'snapshot.insights');
-      if (o['counters'] !== undefined) s.counters = strings(o['counters'], 'snapshot.counters');
+      if (o['counters'] !== undefined) s.counters = list(o['counters'], 'snapshot.counters', installed);
       return s;
     }
     case 'rejected':

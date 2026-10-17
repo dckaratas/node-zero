@@ -13,7 +13,8 @@ class SnapshotStreamTest {
 
     private final SnapshotStream stream = new SnapshotStream(10);
 
-    private static Observation view(long tick, double cpu, List<String> counters) {
+    private static Observation view(long tick, double cpu, List<String> counterIds) {
+        List<Observation.Counter> counters = counterIds.stream().map(id -> new Observation.Counter(id, null, 0)).toList();
         Map<String, Double> metrics = new LinkedHashMap<>();
         metrics.put("node_cpu_utilization", cpu);
         return new Observation(tick, 1000, 0, WaveState.Phase.PREPARATION, 1.0, metrics,
@@ -52,7 +53,7 @@ class SnapshotStreamTest {
 
         ServerMessage.Snapshot next = stream.next(view(4, 0.5, List.of("prometheus")));
 
-        assertThat(next.counters()).containsExactly("prometheus");
+        assertThat(next.counters()).extracting(Observation.Counter::id).containsExactly("prometheus");
         assertThat(next.insights()).isNull();
     }
 
@@ -64,7 +65,7 @@ class SnapshotStreamTest {
         ServerMessage.Snapshot heartbeat = stream.next(view(12, 0.5, List.of("prometheus")));
 
         assertThat(heartbeat.tick()).isEqualTo(12);
-        assertThat(heartbeat.counters()).containsExactly("prometheus");
+        assertThat(heartbeat.counters()).extracting(Observation.Counter::id).containsExactly("prometheus");
         assertThat(heartbeat.insights()).isEmpty();
         assertThat(stream.next(view(14, 0.5, List.of("prometheus")))).isNull();
     }

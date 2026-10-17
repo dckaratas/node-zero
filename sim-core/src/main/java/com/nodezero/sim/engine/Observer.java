@@ -48,8 +48,8 @@ final class Observer {
             }
         }
 
-        List<String> counters = new ArrayList<>();
-        p.counters().forEach(c -> counters.add(c.id()));
+        List<Observation.Counter> counters = new ArrayList<>();
+        p.counters().forEach(c -> counters.add(new Observation.Counter(c.id(), c.option(), c.activeTick())));
         return new Observation(s.tick(), p.credits(), wave.number(), wave.phase(),
                 wave.shield(rules.balance().slo()), metrics, signals, p.insights(), counters);
     }

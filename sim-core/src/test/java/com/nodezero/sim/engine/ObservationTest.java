@@ -40,6 +40,21 @@ class ObservationTest {
     }
 
     @Test
+    void countersShowWhenTheyFinishBuilding() {
+        // prometheus: apply_time_s 5 = 50 ticks after it was applied at tick 1
+        GameState s = game.step(game.newState(1), List.of(new ApplyCounter("prometheus")), 1);
+        Observation building = game.observe(run(s, 20, List.of()));
+        Observation ready = game.observe(run(s, 60, List.of()));
+
+        assertThat(building.counters()).singleElement()
+                .isEqualTo(new Observation.Counter("prometheus", null, 51));
+        assertThat(building.counters().getFirst().isReady(building.tick())).isFalse();
+        assertThat(building.metrics()).isEmpty();
+        assertThat(ready.counters().getFirst().isReady(ready.tick())).isTrue();
+        assertThat(ready.metrics()).isNotEmpty();
+    }
+
+    @Test
     void withoutMonitoringThePlayerSeesNoMetrics() {
         Observation view = game.observe(run(game.newState(1), 100, List.of(new StartWave(3))));
 

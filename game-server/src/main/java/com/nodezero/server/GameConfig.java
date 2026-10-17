@@ -1,5 +1,6 @@
 package com.nodezero.server;
 
+import com.nodezero.server.protocol.CounterCatalog;
 import com.nodezero.sim.engine.Game;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,5 +12,11 @@ class GameConfig {
     @Bean
     Game game() {
         return Game.chapterOne();
+    }
+
+    /** Resolved once for both languages; requests only filter it. */
+    @Bean
+    CounterCatalog counterCatalog(Game game) {
+        return new CounterCatalog(game.rules().content());
     }
 }

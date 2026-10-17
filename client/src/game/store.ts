@@ -1,4 +1,4 @@
-import type { Phase, Snapshot } from '../protocol/messages';
+import type { InstalledCounter, Phase, Snapshot } from '../protocol/messages';
 
 /** A complete view: snapshot deltas merged onto what the client already knows. */
 export interface View {
@@ -10,7 +10,7 @@ export interface View {
   metrics: Readonly<Record<string, number>>;
   signals: readonly string[];
   insights: readonly string[];
-  counters: readonly string[];
+  counters: readonly InstalledCounter[];
 }
 
 /**

@@ -37,3 +37,17 @@ Canlıda istemci Nginx'ten statik dosya olarak sunulur; JVM sadece oyunu taşır
 - Yeniden bağlanma yeni oturum açar (oturuma dönüş Dilim 7).
 - Paket boyutu: Pixi renderer'ları ayrı parçalar; gzip ile ilk yük ~150 KB mertebesinde.
 - Dev konsol yardımcısı `nodezero.send(...)` sadece `vite dev`'de; sayaç paneli Dilim 5b.
+
+## Ek (Dilim 5b, 2026-10-17): sayaç paneli
+| # | Konu | Seçim |
+|---|---|---|
+| V | Katalog | `GET /api/sessions/{id}/catalog?lang=en\|tr`: isim, takas metni, maliyet, süre, seçenek, gereksinim; metinler istenen dilde çözülmüş. `CounterCatalog` açılışta iki dil için bir kez kurulur, istek sadece filtreler. ETag + `Cache-Control: private, no-cache` → değişmemişse 304. Sözleşme fixture'ı: `fixtures/server/catalog.json` (3 örnek sayaç) |
+| W | Kilitli sayaçlar | İçgörü isteyenler (`create-index`, `reschedule-job`) içgörü kazanılana kadar **sunucuda** katalogdan çıkarılır (sis perdesi sunucu tarafında, geliştirici araçlarıyla da görülmez); belirince "new" rozeti. Sayaç isteyenler kilitli ve gerekçeli ("Needs Sensor Array") görünür |
+| X | Kurulum durumu | `Observation.counters` artık `{id, option, readyTick}` (sim-core `Observation.Counter`); kart "Building… n s" gösterir |
+| Y | İyimser arayüz | `Orders`: tıklamada kart "queued", kredi "700 → 550 (queued)"; snapshot sayacı listeleyince onay, `rejected` gelince geri alma + kartta neden. Aktif duraklatmada komutlar bekletildiği için asıl değeri orada |
+
+Tarayıcıda doğrulandı: satın alma → queued → building → online; postgres-exporter → DB metrikleri + "Create index" (new);
+duraklatmada sıraya koyma ve devamda onay. Bulunan hata: Pixi `resizeTo` sadece pencere boyutunu dinliyor; dikey kaydırma
+çubuğu çıkınca canvas taştı → host `ResizeObserver` ile izleniyor.
+
+Kapsam dışı: sayaç ayarları (`keep_days`, `timeout_ms`…) komutta yok, varsayılanlar kullanılıyor; dil seçimi Dilim 6.

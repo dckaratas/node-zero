@@ -15,7 +15,7 @@ import java.util.Map;
  * @param metrics visible metrics in catalog order ({@link Metric}), by exporter name
  * @param signals what users report without any monitoring, e.g. {@code user_complaints}
  * @param insights diagnostic capabilities gained (e.g. {@code pg-stat-statements})
- * @param counters installed counters, in purchase order
+ * @param counters installed counters in purchase order, including ones still being built
  */
 public record Observation(
         long tick,
@@ -26,7 +26,20 @@ public record Observation(
         Map<String, Double> metrics,
         List<String> signals,
         List<String> insights,
-        List<String> counters) {
+        List<Counter> counters) {
+
+    /**
+     * An installed counter as the player sees it. It works from {@code readyTick} on; before that it is
+     * being built (the client shows progress as {@code (readyTick - tick) * DT} seconds left).
+     *
+     * @param option chosen option id, or {@code null}
+     */
+    public record Counter(String id, String option, long readyTick) {
+
+        public boolean isReady(long tick) {
+            return tick >= readyTick;
+        }
+    }
 
     public Observation {
         metrics = Collections.unmodifiableMap(new LinkedHashMap<>(metrics));

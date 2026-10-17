@@ -120,6 +120,30 @@ class GameServerTest {
     }
 
     @Test
+    void catalogIsServedPerSessionWithAnETag() throws Exception {
+        connect();
+        String session = await(type("welcome")).path("session").asString();
+        HttpClient http = HttpClient.newHttpClient();
+        URI uri = URI.create("http://localhost:" + port + "/api/sessions/" + session + "/catalog?lang=tr");
+
+        HttpResponse<String> first = http.send(HttpRequest.newBuilder(uri).build(), HttpResponse.BodyHandlers.ofString());
+        String etag = first.headers().firstValue("ETag").orElseThrow();
+        HttpResponse<String> again = http.send(HttpRequest.newBuilder(uri).header("If-None-Match", etag).build(),
+                HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> badLanguage = http.send(HttpRequest.newBuilder(URI.create(
+                "http://localhost:" + port + "/api/sessions/" + session + "/catalog?lang=xx")).build(),
+                HttpResponse.BodyHandlers.ofString());
+
+        assertThat(first.statusCode()).isEqualTo(200);
+        JsonNode body = json.readTree(first.body());
+        assertThat(body.path("language").asString()).isEqualTo("tr");
+        assertThat(body.path("counters").get(0).path("name").asString()).isEqualTo("Sensör Dizisi");
+        assertThat(first.body()).doesNotContain("create-index"); // needs an insight this session lacks
+        assertThat(again.statusCode()).isEqualTo(304);
+        assertThat(badLanguage.statusCode()).isEqualTo(400);
+    }
+
+    @Test
     void replayLogAndMetricsAreServedOverHttp() throws Exception {
         connect();
         String session = await(type("welcome")).path("session").asString();

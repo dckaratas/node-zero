@@ -45,7 +45,7 @@ public sealed interface ServerMessage {
             Map<String, Double> metrics,
             List<String> signals,
             List<String> insights,
-            List<String> counters) implements ServerMessage {
+            List<Observation.Counter> counters) implements ServerMessage {
 
         /** Every field present: a keyframe. */
         public static Snapshot full(Observation o) {

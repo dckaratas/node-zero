@@ -19,6 +19,8 @@ export class Hud {
   private readonly pause = button('Pause');
   private readonly metrics = el('dl', 'metrics');
   private readonly signals = el('ul', 'signals');
+  /** Where the counter cards go (CounterPanel). */
+  readonly countersHost = el('section', 'counters');
   private paused = false;
   private nextWave = 1;
 
@@ -29,13 +31,15 @@ export class Hud {
     this.shield.setAttribute('aria-valuemax', '100');
     this.shield.append(this.shieldBar);
     top.append(this.wave, this.phase, this.clock, this.shield, this.credits, this.startWave, this.pause, this.status);
-    panel.append(heading('Signals'), this.signals, heading('Metrics'), this.metrics, this.notice);
+    panel.append(heading('Signals'), this.signals, this.notice, heading('Modules'), this.countersHost,
+      heading('Metrics'), this.metrics);
 
     this.startWave.onclick = () => send({ type: 'start_wave', wave: this.nextWave });
     this.pause.onclick = () => send(this.paused ? { type: 'resume' } : { type: 'pause' });
   }
 
-  render(view: View | undefined): void {
+  /** @param projectedCredits credits after queued orders, when any are waiting */
+  render(view: View | undefined, projectedCredits?: number): void {
     if (view === undefined) return;
     this.wave.textContent = `Wave ${view.wave}`;
     this.phase.textContent = view.phase;
@@ -43,7 +47,8 @@ export class Hud {
     // 1 real second = 1 game minute; tick = 0.1 s.
     const minutes = Math.floor(view.tick / 10);
     this.clock.textContent = `T+${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`;
-    this.credits.textContent = `${view.credits} cr`;
+    this.credits.textContent = projectedCredits === undefined || projectedCredits === view.credits
+      ? `${view.credits} cr` : `${view.credits} → ${projectedCredits} cr (queued)`;
     const shield = Math.round(view.shield * 100);
     this.shieldBar.style.width = `${shield}%`;
     this.shield.setAttribute('aria-valuenow', String(shield));

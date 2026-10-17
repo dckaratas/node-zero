@@ -2,9 +2,11 @@ package com.nodezero.server.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.nodezero.sim.content.Language;
 import com.nodezero.sim.engine.Command;
 import com.nodezero.sim.engine.Game;
 import com.nodezero.sim.engine.GameBalance;
+import com.nodezero.sim.engine.Observation;
 import com.nodezero.sim.state.GameState;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -60,20 +62,35 @@ class ContractFixturesTest {
 
     @Test
     void serverMessagesMatchTheClientFixtures() throws IOException {
-        Path dir = FIXTURES.resolve("server");
         for (Map.Entry<String, ServerMessage> e : serverMessages().entrySet()) {
-            // The pretty printer uses the platform line separator; fixtures are LF everywhere.
-            String expected = json.writerFor(ServerMessage.class).writeValueAsString(e.getValue())
-                    .replace("\r\n", "\n") + "\n";
-            Path file = dir.resolve(e.getKey() + ".json");
-            if (UPDATE) {
-                Files.createDirectories(dir);
-                Files.writeString(file, expected, StandardCharsets.UTF_8);
-            }
-            assertThat(file).as("fixture %s (regenerate with -Dcontract.update=true)", file).exists();
-            assertThat(Files.readString(file, StandardCharsets.UTF_8).replace("\r\n", "\n"))
-                    .as(e.getKey()).isEqualTo(expected);
+            matchFixture(e.getKey(), json.writerFor(ServerMessage.class).writeValueAsString(e.getValue()));
         }
+    }
+
+    /** A sample of the catalog body: one plain counter, one gated by a counter, one with options. */
+    @Test
+    void catalogMatchesTheClientFixture() throws IOException {
+        CounterCatalog.Catalog full = new CounterCatalog(Game.chapterOne().rules().content())
+                .visible(Language.EN, List.of("pg-stat-statements"));
+        List<String> sample = List.of("prometheus", "grafana", "create-index");
+        CounterCatalog.Catalog body = new CounterCatalog.Catalog(full.language(),
+                full.counters().stream().filter(c -> sample.contains(c.id())).toList());
+
+        assertThat(body.counters()).hasSize(3);
+        matchFixture("catalog", json.writeValueAsString(body));
+    }
+
+    private static void matchFixture(String name, String json) throws IOException {
+        // The pretty printer uses the platform line separator; fixtures are LF everywhere.
+        String expected = json.replace("\r\n", "\n") + "\n";
+        Path dir = FIXTURES.resolve("server");
+        Path file = dir.resolve(name + ".json");
+        if (UPDATE) {
+            Files.createDirectories(dir);
+            Files.writeString(file, expected, StandardCharsets.UTF_8);
+        }
+        assertThat(file).as("fixture %s (regenerate with -Dcontract.update=true)", file).exists();
+        assertThat(Files.readString(file, StandardCharsets.UTF_8).replace("\r\n", "\n")).as(name).isEqualTo(expected);
     }
 
     @Test
@@ -82,7 +99,7 @@ class ContractFixturesTest {
         ServerMessage.Snapshot keyframe = (ServerMessage.Snapshot) messages.get("snapshot-keyframe");
         ServerMessage.Snapshot delta = (ServerMessage.Snapshot) messages.get("snapshot-delta");
 
-        assertThat(keyframe.counters()).containsExactly("prometheus", "grafana");
+        assertThat(keyframe.counters()).extracting(Observation.Counter::id).containsExactly("prometheus", "grafana");
         assertThat(delta).isNotNull();
         assertThat(delta.counters()).isNull();
         assertThat(delta.insights()).isNull();
