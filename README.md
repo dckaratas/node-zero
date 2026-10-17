@@ -15,6 +15,8 @@ are used, and the project is not affiliated with or endorsed by any of the named
 | Module | Description |
 |---|---|
 | `sim-core` | Pure, deterministic Java 21 simulation engine (no Spring) |
+| `sim-bench` | JMH benchmarks for the tick budget |
+| `game-server` | Spring Boot 4 server: sessions, 10 Hz tick shards, WebSocket protocol |
 
 ## Build
 

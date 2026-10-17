@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: node-zero
+  threads:
+    virtual:
+      enabled: true   # request/WebSocket I/O threads; ticking stays on dedicated shard threads
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+
+nodezero:
+  shards: 0             # 0 = one tick thread per CPU core
+  max-sessions: 5000
+  send-time-limit-ms: 1000
+  send-buffer-bytes: 524288
+  allowed-origins: "*"  # dev default; tighten in slice 7

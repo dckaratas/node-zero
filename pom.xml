@@ -14,6 +14,7 @@
     <modules>
         <module>sim-core</module>
         <module>sim-bench</module>
+        <module>game-server</module>
     </modules>
 
     <properties>
@@ -21,9 +22,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <junit.version>5.11.4</junit.version>
-        <assertj.version>3.26.3</assertj.version>
-        <jackson.version>2.18.2</jackson.version>
+        <!-- One version set for the whole project (JUnit, AssertJ, Jackson 2 and 3, Micrometer...).
+             sim-core only takes versions from it, never Spring itself. -->
+        <spring-boot.version>4.1.1</spring-boot.version>
 
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
@@ -34,23 +35,16 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.junit</groupId>
-                <artifactId>junit-bom</artifactId>
-                <version>${junit.version}</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson</groupId>
-                <artifactId>jackson-bom</artifactId>
-                <version>${jackson.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.assertj</groupId>
-                <artifactId>assertj-core</artifactId>
-                <version>${assertj.version}</version>
+                <groupId>com.nodezero</groupId>
+                <artifactId>sim-core</artifactId>
+                <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -66,6 +60,9 @@
                         <compilerArgs>
                             <arg>-Xlint:all,-processing</arg>
                             <arg>-Werror</arg>
+                            <!-- Keep parameter names: Spring binds @PathVariable by name
+                                 (spring-boot-starter-parent sets this; we use our own parent). -->
+                            <arg>-parameters</arg>
                         </compilerArgs>
                     </configuration>
                 </plugin>

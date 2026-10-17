@@ -38,6 +38,7 @@ Web tabanlı, eğitici bir **bilim kurgu tower defense + sunucu tasarım/yöneti
 | 12 | Determinizm | Yasaklı API listesi, seed'li `SplittableRandom` | [0012](adr/0012-determinism-policy.md) |
 | 13 | Gecikme formülü | Erlang-C (M/M/c) + ρ ≥ 1'de kuyruk boşalma süresi | [0013](adr/0013-latency-approximation.md) |
 | 14 | Performans | Tick < 20 µs/oturum, JMH ile ölçülür | [0014](adr/0014-performance-budget.md) |
+| 15 | Oyun sunucusu | Bellekte oturum + replay günlüğü, çekirdek başına tick shard'ı, ham WebSocket + JSON | [0015](adr/0015-game-server-architecture.md) |
 
 ## 3. Oyun döngüsü
 ```
