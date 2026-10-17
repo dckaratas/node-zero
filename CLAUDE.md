@@ -9,13 +9,14 @@ Detaylar: [docs/GDD.md](docs/GDD.md) · Kararlar: [docs/adr/](docs/adr/) · Öğ
   Mülakatta her kararı savunabilmeli → her kararın "neden"i ve alternatifi açık olsun.
 - Kod sohbette code block olarak gösterilir. Zip yok.
 
-## Dilim akışı (her dilimde)
-1. **Plan** sun → kullanıcı onayını **bekle**.
-2. Başarısız testler → kod → "neden böyle" açıklaması.
+## Dilim akışı (2026-10-17'den itibaren: hızlı tempo)
+1. **Sadece önemli kararlardan önce sor** (mimari, oyun tasarımı, dışa dönük adımlar). Küçük/geri alınabilir
+   seçimlerde makul varsayılanı seç, tek satırla belirt, devam et.
+2. Başarısız testler → kod. Açıklama **kısa**: ne değişti + açık kalanlar. Uzun "neden böyle" anlatımı yok.
 3. Dilim ≤ ~300 satır.
-4. Sonunda 1–2 kontrol sorusu; cevabı değerlendir, yanlışsa nazikçe düzelt, `docs/learning-notes.md`'ye işle.
-5. Kavramları gerçek canlı ortam örnekleriyle anlat.
-6. Yeni tehdit eklerken kaynak modelini (utilization/occupancy/fill) **önce kullanıcıya sor**.
+4. Kontrol soruları ve ayrıntılı kod/proje anlatımı **ertelendi**: proje belli bir seviyeye gelince toplu yapılacak.
+   Ertelenen sorular `docs/learning-notes.md` → "Ertelenen sorular" bölümünde.
+5. Yeni tehdit eklerken kaynak modelini (utilization/occupancy/fill) **önce kullanıcıya sor** (önemli karar sayılır).
 
 ## Kullanıcının yazacağı parçalar (implementasyon YAZMA, sadece test + ipucu)
 - `sim-core` → `FillModel`

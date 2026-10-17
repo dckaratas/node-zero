@@ -38,6 +38,12 @@ Kontrol soruları ve düzeltilen yanlış sezgiler. Mülakat hazırlığı için
   Spring onları hiç görmez. Sadece LB/edge metrikleri veya kullanıcı şikâyetleri gösterir. "Dashboard'da hata yok ama
   kullanıcılar şikâyetçi" durumunun klasik sebebidir.
 
+## Ertelenen sorular (ayrıntılı anlatım aşamasında ele alınacak)
+- Dilim 1b: DB havuzu doygunken (golden tick 150) CPU `rho` neden sabit 0.85? Gerçek Spring'de CPU'ya ne olur,
+  model neyi eksik bırakıyor? (USE, thread doygunluğunda CPU düşük; kaynaklar arası bağlantı Dilim 3)
+- Dilim 1b: Tomcat thread havuzu mu, Hikari mi önce dolar; kullanıcı hangi hatayı görür?
+  (Hikari `connectionTimeout` → `SQLTransientConnectionException` → 500; thread'ler bekleyerek tükenir → acceptCount)
+
 ## Dayanıklılık
 - Naive retry yükü **katlar** (×2, ×3...). Retry fırtınası, düşen servisi tamamen boğar → backoff + jitter + bütçe.
 
