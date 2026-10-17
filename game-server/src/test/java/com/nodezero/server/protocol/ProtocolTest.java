@@ -41,10 +41,11 @@ class ProtocolTest {
     }
 
     @Test
-    void snapshotCarriesTheObservationWithATypeTag() {
+    void snapshotIsTheFlattenedObservationWithATypeTag() {
         Game game = Game.chapterOne();
-        String out = json.writeValueAsString(new ServerMessage.Snapshot(game.observe(game.newState(1))));
+        String out = json.writeValueAsString(ServerMessage.Snapshot.full(game.observe(game.newState(1))));
 
-        assertThat(out).startsWith("{\"type\":\"snapshot\"").contains("\"shield\":").contains("\"phase\":\"PREPARATION\"");
+        assertThat(out).startsWith("{\"type\":\"snapshot\"").contains("\"shield\":").contains("\"phase\":\"PREPARATION\"")
+                .contains("\"counters\":[]").doesNotContain("observation");
     }
 }

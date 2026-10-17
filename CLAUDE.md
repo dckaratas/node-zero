@@ -43,12 +43,12 @@ NODE-01: 4 çekirdek × μ=50 rps (S=20 ms), Tomcat maxThreads=200 / acceptCount
 
 ## Komutlar
 - Build + test: `./mvnw verify` (Windows: `mvnw.cmd verify`)
-- Benchmark (ADR-0014, tick < 20 µs): `./mvnw -q package -DskipTests && java -jar sim-bench/target/benchmarks.jar -prof gc`
-- Sunucu: `./mvnw -q install -DskipTests && java -jar game-server/target/game-server-0.1.0-SNAPSHOT.jar` → `ws://localhost:8080/ws/game`, metrikler `/actuator/prometheus`
-- Yük testi (ADR-0015): `./mvnw test -pl game-server -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SchedulerLoadTest -Dnodezero.load=true -Dnodezero.load.sessions=5000`
+- Benchmark (ADR-0014, tick < 20 µs): `./mvnw -q package -DskipTests && java -jar sim-bench/target/benchmarks.jar -prof gc` (paralel: `ManySessions -t 12`)
+- Sunucu: `./mvnw -q install -DskipTests && java -jar game-server/target/game-server-0.1.0-SNAPSHOT-exec.jar` → `ws://localhost:8080/ws/game`, metrikler `/actuator/prometheus`
+- Yük testi (ADR-0015): `./mvnw test -pl game-server -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SchedulerLoadTest -Dnodezero.load=true -Dnodezero.load.sessions=5000` (Dilim 4 kıyası: `-Dnodezero.load.legacy=true`)
 - Golden master yenile (formül **bilerek** değiştiyse, diff'i incele): `./mvnw test -pl sim-core -Dtest=GoldenMasterTest -Dgolden.update=true`
 
 ## Yol haritası
 0 repo ✅ · 1 sim-core (1a utilization+engine ✅, 1b occupancy ✅, 1c fill ✅) · 2 YAML içerik ✅ · 3a istek hattı + dalga trafiği ✅ ·
-3b hata bütçesi + karşı aksiyonlar ✅ · 3c sis perdesi ✅ · 4 Spring Boot + WebSocket ✅ · 5 TS/PixiJS istemci ·
+3b hata bütçesi + karşı aksiyonlar ✅ · 3c sis perdesi ✅ · 4 Spring Boot + WebSocket ✅ (4b gönderim azaltma ✅) · 5 TS/PixiJS istemci ·
 6 postmortem/kodeks/i18n · 7 canlıya alma + oyunun kendini izlemesi.

@@ -71,16 +71,17 @@ class GameServerTest {
     }
 
     @Test
-    void connectionGetsWelcomeThenSnapshotsAtTenHertz() throws Exception {
+    void connectionGetsWelcomeThenSnapshotsWhileTheGameTicks() throws Exception {
         connect();
 
         JsonNode welcome = await(type("welcome"));
         assertThat(welcome.path("tickHz").asInt()).isEqualTo(10);
+        assertThat(welcome.path("snapshotHz").asInt()).isEqualTo(5);
 
-        long first = await(type("snapshot")).path("observation").path("tick").asLong();
+        long first = await(type("snapshot")).path("tick").asLong();
         Thread.sleep(1000);
         inbox.clear(); // the queue holds a second's worth of snapshots; read a fresh one
-        long later = await(type("snapshot")).path("observation").path("tick").asLong();
+        long later = await(type("snapshot")).path("tick").asLong();
         assertThat(later - first).isBetween(5L, 20L);
     }
 
@@ -91,8 +92,8 @@ class GameServerTest {
 
         send("{\"type\":\"start_wave\",\"wave\":1}");
 
-        JsonNode snapshot = await(m -> type("snapshot").test(m) && m.path("observation").path("wave").asInt() == 1);
-        assertThat(snapshot.path("observation").path("phase").asString()).isEqualTo("RUNNING");
+        JsonNode snapshot = await(m -> type("snapshot").test(m) && m.path("wave").asInt() == 1);
+        assertThat(snapshot.path("phase").asString()).isEqualTo("RUNNING");
     }
 
     @Test
@@ -124,7 +125,7 @@ class GameServerTest {
         String session = await(type("welcome")).path("session").asString();
         send("{\"type\":\"apply_counter\",\"counter\":\"prometheus\"}");
         await(m -> type("snapshot").test(m)
-                && m.path("observation").path("counters").toString().contains("prometheus"));
+                && m.path("counters").toString().contains("prometheus"));
 
         HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
         HttpResponse<String> replay = http.send(HttpRequest.newBuilder(URI.create(

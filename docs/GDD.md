@@ -253,7 +253,7 @@ threat:
 | 1c | FillModel (kullanıcı yazar) |
 | 2 | YAML içerik yükleyici + Bölüm 1 tehdit/counter dosyaları + şema doğrulama |
 | 3 | Dalga yöneticisi, hata bütçesi, komutlar, sis perdesi |
-| 4 | Spring Boot oyun sunucusu + WebSocket (delta snapshot) |
+| 4 | Spring Boot oyun sunucusu + WebSocket (5 Hz, değişince gönderilen snapshot; ADR-0015 eki) |
 | 5 | TypeScript/PixiJS istemci (altıgen harita, HUD, iyimser arayüz, interpolasyon) |
 | 6 | Postmortem + Kodeks + i18n |
 | 7 | Canlıya alma: Docker, VPS, Prometheus/Grafana ile oyunun kendisini izleme |

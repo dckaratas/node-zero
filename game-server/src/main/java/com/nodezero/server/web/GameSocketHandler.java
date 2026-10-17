@@ -3,6 +3,7 @@ package com.nodezero.server.web;
 import com.nodezero.server.ServerProperties;
 import com.nodezero.server.protocol.ClientMessage;
 import com.nodezero.server.protocol.ServerMessage;
+import com.nodezero.server.protocol.SnapshotStream;
 import com.nodezero.server.session.Session;
 import com.nodezero.server.session.SessionHost;
 import com.nodezero.server.session.SessionListener;
@@ -54,7 +55,8 @@ public class GameSocketHandler extends TextWebSocketHandler {
             return;
         }
         socket.getAttributes().put(SESSION_ATTRIBUTE, session.id());
-        send(out, new ServerMessage.Welcome(session.id(), session.seed(), SimConstants.TICK_HZ));
+        send(out, new ServerMessage.Welcome(
+                session.id(), session.seed(), SimConstants.TICK_HZ, properties.snapshotHz()));
     }
 
     @Override
@@ -104,6 +106,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
     private final class SocketListener implements SessionListener {
 
         private final WebSocketSession out;
+        private final SnapshotStream snapshots = new SnapshotStream(SimConstants.TICK_HZ); // keyframe each second
 
         SocketListener(WebSocketSession out) {
             this.out = out;
@@ -111,7 +114,10 @@ public class GameSocketHandler extends TextWebSocketHandler {
 
         @Override
         public void onObservation(Observation observation) {
-            deliver(new ServerMessage.Snapshot(observation));
+            ServerMessage.Snapshot snapshot = snapshots.next(observation);
+            if (snapshot != null) {
+                deliver(snapshot);
+            }
         }
 
         @Override

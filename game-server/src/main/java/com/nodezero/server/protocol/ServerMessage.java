@@ -1,9 +1,12 @@
 package com.nodezero.server.protocol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.nodezero.sim.engine.Observation;
+import com.nodezero.sim.state.WaveState;
 import java.util.List;
+import java.util.Map;
 
 /** Messages the server sends, as JSON with a {@code type} field. */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -16,11 +19,37 @@ import java.util.List;
 })
 public sealed interface ServerMessage {
 
-    /** First message on a new connection. */
-    record Welcome(String session, long seed, int tickHz) implements ServerMessage {}
+    /**
+     * First message on a new connection.
+     *
+     * @param tickHz simulation rate
+     * @param snapshotHz highest snapshot rate; the client interpolates between snapshots
+     */
+    record Welcome(String session, long seed, int tickHz, int snapshotHz) implements ServerMessage {}
 
-    /** The player's full fog-of-war view, once per tick (decision M: full view first, deltas if needed). */
-    record Snapshot(Observation observation) implements ServerMessage {}
+    /**
+     * The player's fog-of-war view ({@link Observation}), flattened. Sent only when something changed
+     * ({@link SnapshotStream}); {@code insights} and {@code counters} are omitted (null) when unchanged
+     * since the previous snapshot, so the client keeps its last copy.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record Snapshot(
+            long tick,
+            int credits,
+            int wave,
+            WaveState.Phase phase,
+            double shield,
+            Map<String, Double> metrics,
+            List<String> signals,
+            List<String> insights,
+            List<String> counters) implements ServerMessage {
+
+        /** Every field present: a keyframe. */
+        public static Snapshot full(Observation o) {
+            return new Snapshot(o.tick(), o.credits(), o.wave(), o.phase(), o.shield(),
+                    o.metrics(), o.signals(), o.insights(), o.counters());
+        }
+    }
 
     /** A player action the rules did not allow (not enough credits, missing insight...). */
     record Rejected(ClientMessage action, String reason) implements ServerMessage {}

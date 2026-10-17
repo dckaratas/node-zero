@@ -65,6 +65,17 @@ class SessionTest {
     }
 
     @Test
+    void snapshotCadenceObservesOnlyEveryNthTick() {
+        Session everyOther = new Session("s2", 42, game, 2, recorder);
+        for (int i = 0; i < 6; i++) {
+            everyOther.tick();
+        }
+
+        assertThat(everyOther.state().tick()).isEqualTo(6);
+        assertThat(recorder.observations).extracting(Observation::tick).containsExactly(2L, 4L, 6L);
+    }
+
+    @Test
     void submittedCommandIsAppliedOnTheNextTickAndLogged() {
         ticks(2);
         session.submit(new Command.StartWave(1));

@@ -60,7 +60,8 @@ public final class SessionHost implements SmartLifecycle {
         if (sessions.size() >= properties.maxSessions()) {
             throw new SessionLimitException(properties.maxSessions());
         }
-        Session session = new Session(UUID.randomUUID().toString(), seeds.nextLong(), game, listener);
+        Session session = new Session(UUID.randomUUID().toString(), seeds.nextLong(), game,
+                properties.snapshotEveryTicks(), listener);
         TickShard shard = shards.get(Math.floorMod(nextShard.getAndIncrement(), shards.size()));
         sessions.put(session.id(), session);
         shardOf.put(session.id(), shard);

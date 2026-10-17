@@ -21,3 +21,4 @@ nodezero:
   send-time-limit-ms: 1000
   send-buffer-bytes: 524288
   allowed-origins: "*"  # dev default; tighten in slice 7
+  snapshot-hz: 5        # simulation ticks at 10 Hz; the client interpolates (ADR-0015 addendum)

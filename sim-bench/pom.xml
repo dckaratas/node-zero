@@ -22,7 +22,21 @@
         <dependency>
             <groupId>com.nodezero</groupId>
             <artifactId>sim-core</artifactId>
-            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Only the wire format (protocol package): no Spring or web server in the benchmark jar. -->
+            <groupId>com.nodezero</groupId>
+            <artifactId>game-server</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>

@@ -45,3 +45,33 @@ Ayrıntılar:
 - Sınırlama: yeniden başlatmada oturumlar kaybolur; kimlik doğrulama yok (replay uç noktası UUID ile korunuyor). Dilim 7.
 - Tuzak notu: kendi parent POM'umuz `-parameters` bayrağını eklemek zorunda (`@PathVariable`); artımlı derleme
   derleyici ayarı değişince eski sınıfları yeniden derlemedi → `clean` gerekti.
+
+## Ek (Dilim 4b, 2026-10-17): JSON maliyeti ölçüldü, gönderim azaltıldı
+**Bulgu 1 yanlıştı.** "~23 µs JSON" ölçülmemiş, döngü süresinden çıkarılmıştı. Ayrı ölçüm (JMH, sıcak):
+
+| Ölçüm | Sonuç |
+|---|---|
+| `SnapshotEncodingBenchmark`: tam görünüm → JSON String | **1.5 µs**, 3.3 KB çöp |
+| aynısı → `byte[]` (mapper veya önceden kurulmuş `ObjectWriter`) | 1.8 µs, aynı çöp → kazanç yok |
+| `ManySessionsBenchmark`: tick + observe, 1 thread | 4.7 µs/oturum (500 oturumda da aynı → soğuk önbellek etkisi yok) |
+| aynısı 4 / 8 / 12 paralel thread | 5.7 / 11.5 / 18.5 µs/oturum |
+
+Asıl neden **paralel ölçekleme**: tick başına ~4.2 KB çöp (+3.3 KB JSON) × 12 thread; makine hibrit
+(4 P çekirdek + HT, 4 E çekirdek = 12 mantıksal). Yük testindeki oturum başı ~25 µs'nin çoğu bu; JSON payı küçük.
+
+**Kararlar (S/T/U):**
+| # | Seçim |
+|---|---|
+| S | Ölçüm: iki JMH benchmark'ı (yukarıda). `byte[]` yolu **reddedildi**: daha hızlı değil, üstelik Spring `TextMessage`'ı `sendText(String)` ile gönderiyor (bytes → String geri çevrilir) |
+| T | Simülasyon 10 Hz, snapshot **5 Hz** (`nodezero.snapshot-hz`, `observe` sadece gönderim tick'inde). `SnapshotStream`: görünüm değişmediyse gönderme; `insights`/`counters` sadece değişince; saniyede bir tam kare (heartbeat + resync). Snapshot düzleştirildi (`observation` sarmalayıcısı yok), `welcome` içinde `snapshotHz` |
+| U | Kompakt şema, ikili format (CBOR/Protobuf) ve permessage-deflate şimdilik yok: ölçüm gerektirmiyor; deflate CPU'yu artırır |
+
+Yük testi (5000 oturum, aynı makine, iki tekrar):
+| | Shard döngüsü (ort.) | Kare/sn | Giden |
+|---|---|---|---|
+| Dilim 4 (`-Dnodezero.load.legacy=true`) | 10.3–11.4 ms | 50 000 | 20.2 MB/s (≈162 Mbit/s) |
+| Dilim 4b | 8.6–8.7 ms | 17 000 | 8.0 MB/s (≈64 Mbit/s) |
+
+Sonuç: bant **%60**, kare sayısı **%66** düştü; CPU ~%20 düştü (kalan maliyet simülasyonun kendisi).
+Takip adayı: `Game.step`/`observe` tahsisatını azaltmak (paralel ölçeklemenin asıl sınırı); kare başına ~470 B
+gerekirse kompakt şemayla yarıya iner.

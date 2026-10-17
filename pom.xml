@@ -13,8 +13,8 @@
 
     <modules>
         <module>sim-core</module>
-        <module>sim-bench</module>
         <module>game-server</module>
+        <module>sim-bench</module>
     </modules>
 
     <properties>
@@ -44,6 +44,11 @@
             <dependency>
                 <groupId>com.nodezero</groupId>
                 <artifactId>sim-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nodezero</groupId>
+                <artifactId>game-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

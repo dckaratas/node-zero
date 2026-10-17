@@ -29,6 +29,7 @@ public final class Session {
     private final long seed;
     private final Game game;
     private final SessionListener listener;
+    private final int snapshotEveryTicks;
     private final ConcurrentLinkedQueue<Inbound> inbox = new ConcurrentLinkedQueue<>();
     private final List<Command> held = new ArrayList<>();
     private final List<LoggedCommand> log = new ArrayList<>();
@@ -37,10 +38,16 @@ public final class Session {
     private boolean paused;
 
     public Session(String id, long seed, Game game, SessionListener listener) {
+        this(id, seed, game, 1, listener);
+    }
+
+    /** @param snapshotEveryTicks observe (and report) only on ticks divisible by this; 1 = every tick */
+    public Session(String id, long seed, Game game, int snapshotEveryTicks, SessionListener listener) {
         this.id = id;
         this.seed = seed;
         this.game = game;
         this.listener = listener;
+        this.snapshotEveryTicks = snapshotEveryTicks;
         this.state = game.newState(seed);
     }
 
@@ -76,7 +83,7 @@ public final class Session {
         }
     }
 
-    /** Advances one tick (10 Hz). Shard thread only. */
+    /** Advances one tick (10 Hz) and reports the view on snapshot ticks. Shard thread only. */
     void tick() {
         Inbound in;
         while ((in = inbox.poll()) != null) {
@@ -117,7 +124,9 @@ public final class Session {
             }
         }
         state = result;
-        listener.onObservation(game.observe(result));
+        if (next % snapshotEveryTicks == 0) {
+            listener.onObservation(game.observe(result));
+        }
     }
 
     void fail(Throwable error) {
