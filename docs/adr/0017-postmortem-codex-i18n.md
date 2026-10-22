@@ -1,6 +1,6 @@
 # ADR-0017: Postmortem, kodeks ve i18n uygulaması (Dilim 6)
 
-- **Durum:** Kabul edildi (6a postmortem ve 6b kodeks uygulandı; 6c dil seçici)
+- **Durum:** Kabul edildi, uygulandı (6a postmortem, 6b kodeks, 6c dil seçici)
 - **Tarih:** 2026-10-22
 
 ## Bağlam
@@ -43,3 +43,10 @@ EN/TR) hazırdı; kodeks maddeleri atıf olarak vardı ama yazılmamıştı; `re
 - İstemci: `<details>` tabanlı kodeks bölümü (klavye/ekran okuyucu ücretsiz), en yeni üstte, açılana kadar "new"; yenilemede
   açık makaleler açık kalır. Uzun modül listesinin altında kaybolmasın diye panelde Modules'un üstünde.
 - Teknik içerik Claude tarafından yazıldı; **kullanıcı teknik doğruluk açısından gözden geçirecek** (öğrenme notlarına eklendi).
+
+## Ek (Dilim 6c, 2026-10-22): içerik dili seçici
+- Başlıkta EN/TR seçici; arayüz EN kalır. Seçim `localStorage`'da (erişim hata verirse sessizce yok sayılır); kayıt yoksa
+  tarayıcı dili `tr` ile başlıyorsa Türkçe, değilse İngilizce.
+- Değişince: i18n paketi, katalog ve kodeks yeni dilde yeniden çekilir; postmortem diyaloğu yeni metinlerle yeniden kurulur.
+  "new" rozetleri ve keşifler id'ye bağlı olduğu için dil değişince kaybolmaz.
+- İçerik alanlarına (`countersHost`, `codexHost`, diyalog) `lang` niteliği verilir: ekran okuyucu Türkçe metni Türkçe okur.

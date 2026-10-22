@@ -1,4 +1,5 @@
 import './style.css';
+import { loadLanguage, saveLanguage, type ContentLanguage } from './game/language';
 import { Orders } from './game/orders';
 import { Review } from './game/postmortem';
 import { GameStore } from './game/store';
@@ -29,6 +30,7 @@ let session: string | undefined;
 let tickHz = 10;
 let insightsKey = '';
 let codexKey = '';
+let language: ContentLanguage = loadLanguage();
 
 const connection = new Connection(Connection.defaultUrl(), {
   onMessage(message) {
@@ -44,7 +46,7 @@ const connection = new Connection(Connection.defaultUrl(), {
         review.reset();
         panel.reset();
         codexPanel.reset();
-        catalog.load(session);
+        catalog.load(session, language);
         hud.setPaused(false);
         hud.showNotice(`Session ${message.session.slice(0, 8)} · seed ${message.seed}`);
         break;
@@ -55,13 +57,13 @@ const connection = new Connection(Connection.defaultUrl(), {
         const key = view.insights.join('|');
         if (key !== insightsKey && session !== undefined) {
           insightsKey = key;
-          catalog.load(session);
+          catalog.load(session, language);
         }
         // A purchase or an answered postmortem opened codex entries: fetch their texts.
         const opened = view.codex.join('|');
         if (opened !== codexKey && session !== undefined) {
           codexKey = opened;
-          codex.load(session);
+          codex.load(session, language);
         }
         break;
       }
@@ -117,8 +119,27 @@ map.ticker.add((ticker) => {
   postmortem.render(store.current()?.postmortem ?? null);
 });
 
-// Content language selection arrives in slice 6c; until then content is shown in English.
-texts.load('en').catch((e: unknown) => {
+hud.setContentLanguage(language);
+postmortem.setLanguage(language);
+
+// Content language (slice 6c): reload the texts, then everything the server resolves by language.
+hud.onLanguageChange((next) => {
+  language = next;
+  saveLanguage(next);
+  hud.setContentLanguage(next);
+  texts.load(next)
+    .then(() => postmortem.setLanguage(next))
+    .catch((e: unknown) => {
+      console.error(e);
+      hud.showNotice('Could not load texts');
+    });
+  if (session !== undefined) {
+    catalog.load(session, next);
+    codex.load(session, next);
+  }
+});
+
+texts.load(language).catch((e: unknown) => {
   console.error(e);
   hud.showNotice('Could not load texts');
 }).finally(() => connection.connect());

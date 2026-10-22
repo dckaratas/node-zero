@@ -1,3 +1,4 @@
+import { LANGUAGES, type ContentLanguage } from '../game/language';
 import type { View } from '../game/store';
 import type { ConnectionStatus } from '../net/connection';
 import type { ClientAction } from '../protocol/messages';
@@ -17,6 +18,7 @@ export class Hud {
   private readonly notice = el('div', 'notice');
   private readonly startWave = button('Start wave');
   private readonly pause = button('Pause');
+  private readonly language = document.createElement('select');
   private readonly metrics = el('dl', 'metrics');
   private readonly signals = el('ul', 'signals');
   /** Where the counter cards go (CounterPanel). */
@@ -32,13 +34,30 @@ export class Hud {
     this.shield.setAttribute('aria-valuemin', '0');
     this.shield.setAttribute('aria-valuemax', '100');
     this.shield.append(this.shieldBar);
-    top.append(this.wave, this.phase, this.clock, this.shield, this.credits, this.startWave, this.pause, this.status);
+    this.language.className = 'language';
+    this.language.setAttribute('aria-label', 'Content language');
+    this.language.title = 'Language of threats, modules, postmortems and the codex';
+    this.language.append(...LANGUAGES.map((l) => new Option(l.label, l.code)));
+    top.append(this.wave, this.phase, this.clock, this.shield, this.credits, this.startWave, this.pause, this.status,
+      this.language);
     // Codex above the long module list: closed articles are one line each.
     panel.append(heading('Signals'), this.signals, this.notice, this.codexHost, heading('Modules'), this.countersHost,
       heading('Metrics'), this.metrics);
 
     this.startWave.onclick = () => send({ type: 'start_wave', wave: this.nextWave });
     this.pause.onclick = () => send(this.paused ? { type: 'resume' } : { type: 'pause' });
+  }
+
+  /** Content language picker (slice 6c). The interface itself stays English (ADR-0009). */
+  onLanguageChange(listener: (language: ContentLanguage) => void): void {
+    this.language.onchange = () => listener(this.language.value === 'tr' ? 'tr' : 'en');
+  }
+
+  /** Shows the choice and tags content areas so screen readers pronounce them in the right language. */
+  setContentLanguage(language: ContentLanguage): void {
+    this.language.value = language;
+    this.countersHost.lang = language;
+    this.codexHost.lang = language;
   }
 
   /** @param projectedCredits credits after queued orders, when any are waiting */

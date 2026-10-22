@@ -29,6 +29,12 @@ export class PostmortemDialog {
     document.body.append(this.dialog);
   }
 
+  /** Content language changed: tag the dialog and rebuild it with the newly loaded texts. */
+  setLanguage(language: string): void {
+    this.dialog.lang = language;
+    this.key = '';
+  }
+
   render(pm: Postmortem | null): void {
     const stage = this.review.stage(pm);
     const key = `${stage.kind}|${pm?.wave ?? ''}|${stage.kind === 'sent' ? stage.option : ''}`;

@@ -149,3 +149,15 @@ dialog.postmortem .footer p { margin: 0; }
 .codex summary { cursor: pointer; font-weight: 600; }
 .codex summary:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
 .codex details p { margin: 8px 0 4px; color: #b9c4e6; line-height: 1.45; }
+
+/* Content language picker (slice 6c) */
+.hud select.language {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: #24305a;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.hud select.language:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
