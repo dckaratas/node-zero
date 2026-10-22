@@ -9,8 +9,8 @@ threat:
     wave: 5
     event: cron
     schedule: { cron: "0 3 * * *", timezone: station }
-  data: { table: orders, initial_rows: 1500000, rows_per_second: 0 }
-  job: { rows_per_minute: 50000, io_rps: 100, io_service_time_ms: 8 }
+  data: { table: orders, initial_rows: 500000, rows_per_second: 0 }
+  job: { rows_per_minute: 50000, io_rps: 100, io_service_time_ms: 8, starts_after_s: 20 }
   traffic:
     baseline_rps: 120
     shape:

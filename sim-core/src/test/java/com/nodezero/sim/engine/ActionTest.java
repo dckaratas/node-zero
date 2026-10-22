@@ -125,15 +125,15 @@ class ActionTest {
     }
 
     @Test
-    void cancellingQueriesFreesThePoolUntilTheJobRetries() {
-        GameState s = idle(step(GAME.newState(1), new StartWave(5)), 5); // the 30 s report job holds 8 of 10 connections
+    void cancellingQueriesFreesThePoolWhileTheJobIsPaused() {
+        // The report job starts 20 s into the wave and holds 8 of 10 connections (ADR-0018 AV).
+        GameState s = idle(step(GAME.newState(1), new StartWave(5)), 22);
         double failedBefore = s.wave().failedRequests();
 
-        s = step(s, new RunAction("cancel-queries"));
-        assertThat(s.wave().failedRequests()).isGreaterThan(failedBefore);
-        double pausedActive = pool(idle(s, 5), ResourceId.DB_POOL).active();
-        double retriedActive = pool(idle(s, 12), ResourceId.DB_POOL).active();
-        assertThat(pausedActive).as("job paused").isLessThan(retriedActive);
+        GameState cancelled = step(s, new RunAction("cancel-queries"));
+        assertThat(cancelled.wave().failedRequests()).as("cancelled queries fail").isGreaterThan(failedBefore);
+        assertThat(pool(idle(cancelled, 5), ResourceId.DB_POOL).active())
+                .as("job paused").isLessThan(pool(idle(s, 5), ResourceId.DB_POOL).active());
     }
 
     @Test

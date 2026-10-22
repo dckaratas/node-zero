@@ -6,7 +6,7 @@ threat:
   chapter: 1
   persists: true   # the table keeps growing after the wave
   trigger: { wave: 4, event: data-growth }
-  data: { table: orders, initial_rows: 1000000, rows_per_second: 4000 }
+  data: { table: orders, initial_rows: 500000, rows_per_second: 4750 }
   traffic:
     baseline_rps: 100
     shape:

@@ -141,3 +141,25 @@ M/M/c kuyruğunda Erlang-C de aynı üstel sönümü verir. Amaç (kademeli pay,
 - **Kuyruk:** HikariCP altında `hikaricp_connections_pending` kadar sarı blok (en fazla 8). **AP'den sapma:** Tomcat accept kuyruğu export edilmediği için çizilmedi (AQ, sis perdesi; denetçide de "not exported").
 - **Kırmızı akış:** boru başına 6 parçacık, `error_rate` oranında kırmızı (≥ %1 ise en az bir tane; Grafana gerekir), boru boyunca dağıtılmış.
 - Hesap istemcide saf fonksiyon (`game/mapFeedback.ts`, testli). `step` sıcak yolu değişmedi (`appDown` sadece gözlemde).
+
+## Ek (Dilim 9a, 2026-10-22): dalga dengesi (AU, AV, AY)
+- **AU:** log fırtınası 0,002 → 0,003 MB/istek; disk ~83. sn'de dolar (önce 118. sn, dalga 120 sn).
+- **AV:** Arşiv Kayması `initial_rows` 1M → 500k, `rows_per_second` 4000 → 4750: DB ~50. sn'de ısınır, ~105. sn'de çöker
+  (önce dalga zaten çökük başlıyordu). Gece Defteri `job.starts_after_s: 20` (yeni, isteğe bağlı alan) ve 1,5M → 500k satır
+  (iş 30 → 10 sn).
+- **AY:** `BalanceTest`: her tehdit dalgası, önceki tehditler hazırlıkta çözülmüş ve izleme kurulu bir istasyonda tek başına
+  oynanır. Tepki = kalkan görünür yanınca (yakma ≥ ×1) doğru eylem + düzeltmeyi satın almak.
+
+| Dalga | Hazırlıksız | Sadece eylem | Sadece geç düzeltme | Eylem + düzeltme | Hazırlıklı |
+|---|---|---|---|---|---|
+| 2 Log fırtınası | 0,42 | 1,00 (truncate) | 0,42 | 1,00 | 1,00 |
+| 3 Festival | 0,00 | 0,00 | 0,25 | 0,25 | 1,00 |
+| 4 Arşiv Kayması | 0,51 | — | 0,83 (blocking indeks) | 0,83 | 1,00 |
+| 5 Gece Defteri | 0,39 | 0,92 (cancel-queries) | 0,93 | 0,92 | 1,00 |
+
+- Bantlar: hazırlıksız 0,2–0,6, tepki ≥ 0,7, hazırlıklı > 0,99. **Dalga 3 bantları 9b'de** (AW özellik kapatma + AX CPU 20 sn).
+- Bulgular: dalga 2'de geç `log-level-info` diski boşaltmaz, kurtaran truncate'tir. Dalga 4'te yangında doğru seçim
+  **blocking** indeks (10 sn yazma kilidi), hazırlıkta concurrently; cancel-queries ve statement_timeout kurtarmaz
+  (sorgular yine başarısız sayılır). Dalga 5'te cancel-queries 10 sn'lik işi o gün için atlatır; iş ertesi gün döner.
+- Etkilenen testler yeni içeriğe göre güncellendi; "dalga FAILED" beklentileri "kalkan < 0,7" oldu. Golden master
+  (dalga 4) içerik nedeniyle yenilendi.

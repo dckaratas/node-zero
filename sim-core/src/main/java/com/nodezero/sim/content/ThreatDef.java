@@ -103,12 +103,17 @@ public record ThreatDef(
     /**
      * Daily batch job (wave 5). Runs for rows / rows_per_minute game minutes, holding the slots of its
      * occupancy consumption and sending {@code io_rps} I/O operations of {@code io_service_time_ms} each.
+     * {@code starts_after_s} (optional) delays the first run into the wave, so the player sees it coming
+     * (ADR-0018 AV).
      */
-    public record Job(double rowsPerMinute, double ioRps, double ioServiceTimeMs) {
+    public record Job(double rowsPerMinute, double ioRps, double ioServiceTimeMs, Double startsAfterS) {
         public Job {
             Require.positive(rowsPerMinute, "job.rows_per_minute");
             Require.nonNegative(ioRps, "job.io_rps");
             Require.positive(ioServiceTimeMs, "job.io_service_time_ms");
+            if (startsAfterS != null) {
+                Require.nonNegative(startsAfterS, "job.starts_after_s");
+            }
         }
     }
 

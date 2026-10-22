@@ -159,7 +159,8 @@ final class Pipeline {
         if (m.isolatedSlots > 0) {
             durationS *= (double) c.slots() / m.isolatedSlots;
         }
-        return since % DAY_SECONDS < durationS;
+        double at = since - (job.startsAfterS() == null ? 0 : job.startsAfterS());
+        return at >= 0 && at % DAY_SECONDS < durationS;
     }
 
     /** True while a downtime window (an action, or a counter being built or removed) stops the app. */

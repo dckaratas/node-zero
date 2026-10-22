@@ -148,9 +148,9 @@ class WaveAndCounterTest {
         session.at(afterStorm.tick() + 1, new Command.AnswerPostmortem("b"), new StartWave(3));
         GameState later = session.runUntil(afterStorm.tick() + 300);
 
-        // DEBUG logs keep filling the cargo hold during the next wave.
+        // DEBUG logs filled the cargo hold in wave 2 and keep it full during the next wave.
         FillState disk = (FillState) later.resource(ResourceId.DISK).state();
-        assertThat(disk.level()).isGreaterThan(((FillState) afterStorm.resource(ResourceId.DISK).state()).level());
+        assertThat(disk.level()).isCloseTo(100, within(0.01));
         assertThat(later.progress().isThreatActive("traffic-surge")).isTrue();
     }
 
@@ -203,14 +203,14 @@ class WaveAndCounterTest {
         GameState s = new Session().at(1, new ApplyCounter("raise-max-threads")).at(2, new StartWave(4)).runWave();
 
         assertThat(((OccupancyModel) s.resource(ResourceId.THREADS).model()).poolSize()).isEqualTo(400);
-        assertThat(s.wave().phase()).isEqualTo(Phase.FAILED);
+        assertThat(s.wave().shield(0.99)).isLessThan(0.7);
     }
 
     @Test
     void nightlyJobAtPeakHourBreaksTheWave() {
         GameState s = new Session().at(1, new StartWave(5)).runWave();
 
-        assertThat(s.wave().phase()).isEqualTo(Phase.FAILED);
+        assertThat(s.wave().shield(0.99)).isLessThan(0.7);
     }
 
     @Test
