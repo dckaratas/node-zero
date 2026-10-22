@@ -29,4 +29,4 @@ threat:
       - { id: c, key: pm.log_storm.traffic_spike }
       - { id: d, key: pm.log_storm.disk_hardware }
     reward: { unlock: log-level-guard }
-  codex: [fill-model, log-levels, logrotate, predict-linear]
+  codex: [fill-model, log-levels, logrotate, predict-linear, burn-rate]

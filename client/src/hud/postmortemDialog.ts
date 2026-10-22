@@ -35,6 +35,10 @@ export class PostmortemDialog {
     this.key = '';
   }
 
+  isOpen(): boolean {
+    return this.dialog.open;
+  }
+
   render(pm: Postmortem | null): void {
     const stage = this.review.stage(pm);
     const key = `${stage.kind}|${pm?.wave ?? ''}|${stage.kind === 'sent' ? stage.option : ''}`;

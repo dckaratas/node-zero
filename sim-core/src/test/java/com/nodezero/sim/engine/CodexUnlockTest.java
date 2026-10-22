@@ -41,7 +41,8 @@ class CodexUnlockTest {
 
         s = step(s, new AnswerPostmortem("a")); // even a wrong answer earns the explanation
 
-        assertThat(GAME.observe(s).codex()).containsExactly("fill-model", "log-levels", "logrotate", "predict-linear");
+        assertThat(GAME.observe(s).codex()).containsExactly(
+                "fill-model", "log-levels", "logrotate", "predict-linear", "burn-rate");
     }
 
     @Test

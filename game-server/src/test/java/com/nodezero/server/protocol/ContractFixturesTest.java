@@ -55,6 +55,8 @@ class ContractFixturesTest {
         messages.put("snapshot-keyframe", keyframe);
         messages.put("snapshot-delta", delta);
         messages.put("snapshot-postmortem", ServerMessage.Snapshot.full(game.observe(afterLogStorm(game))));
+        messages.put("snapshot-burning", ServerMessage.Snapshot.full(game.observe(midSurge())));
+        messages.put("snapshot-chapter", ServerMessage.Snapshot.full(game.observe(chapterWon(game))));
         messages.put("rejected", new ServerMessage.Rejected(new ClientMessage.ApplyCounter("grafana", null),
                 "grafana needs prometheus installed first"));
         messages.put("paused", new ServerMessage.Paused(true));
@@ -67,6 +69,32 @@ class ContractFixturesTest {
         GameState s = game.step(game.newState(7), List.of(new Command.StartWave(2)), 1);
         while (s.wave().phase() == WaveState.Phase.RUNNING) {
             s = game.step(s, List.of(), s.tick() + 1);
+        }
+        return s;
+    }
+
+    /** No counters, wave 3 (traffic surge) on the default rules: the shield burns fast. */
+    private static GameState midSurge() {
+        Game game = Game.chapterOne(GameBalance.DEFAULT);
+        GameState s = game.step(game.newState(7), List.of(new Command.StartWave(3)), 1);
+        while (game.observe(s).burnRate() < 5 && s.wave().phase() == WaveState.Phase.RUNNING) {
+            s = game.step(s, List.of(), s.tick() + 1);
+        }
+        return s;
+    }
+
+    /** All five waves played in practice mode, every postmortem answered right: the chapter summary. */
+    private static GameState chapterWon(Game game) {
+        String[] right = {null, null, "b", "b", "c", "c"};
+        GameState s = game.newState(7);
+        for (int wave = 1; wave <= 5; wave++) {
+            s = game.step(s, List.of(new Command.StartWave(wave)), s.tick() + 1);
+            while (s.wave().phase() == WaveState.Phase.RUNNING) {
+                s = game.step(s, List.of(), s.tick() + 1);
+            }
+            if (right[wave] != null) {
+                s = game.step(s, List.of(new Command.AnswerPostmortem(right[wave])), s.tick() + 1);
+            }
         }
         return s;
     }

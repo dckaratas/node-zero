@@ -20,7 +20,7 @@ export interface Welcome {
   snapshotHz: number;
 }
 
-/** Fog-of-war view. insights/counters are absent when unchanged since the previous snapshot. */
+/** Fog-of-war view. Delta fields (insights, counters, codex, results) are absent when unchanged. */
 export interface Snapshot {
   type: 'snapshot';
   tick: number;
@@ -29,6 +29,10 @@ export interface Snapshot {
   phase: Phase;
   /** Error budget left in the running wave, 0..1. */
   shield: number;
+  /** Budget spend speed vs. the pace that lasts the whole wave (1 = empty at the end); 0 outside a wave. */
+  burnRate: number;
+  /** Seconds until the shield breaks at the current failure rate; -1 when it is not burning. */
+  shieldEmptyInS: number;
   /** Only the metrics the player's monitoring can measure, by exporter name. */
   metrics: Record<string, number>;
   signals: string[];
@@ -38,6 +42,28 @@ export interface Snapshot {
   postmortem?: Postmortem;
   /** Opened codex entry ids, in the order earned; absent when unchanged (delta field). */
   codex?: string[];
+  /** How each played wave ended, by wave number; absent when unchanged (delta field). */
+  results?: WaveResult[];
+  /** Present once the chapter is won (not a delta field). */
+  chapter?: ChapterSummary;
+}
+
+export interface WaveResult {
+  wave: number;
+  survived: boolean;
+  shield: number;
+  /** Credits the wave paid: reward minus upkeep. */
+  earned: number;
+  /** null for a quiet wave or an unanswered postmortem. */
+  postmortemRight: boolean | null;
+}
+
+export interface ChapterSummary {
+  number: number;
+  stars: number;
+  averageShield: number;
+  postmortemsRight: number;
+  postmortems: number;
 }
 
 /** Root-cause question after a threat wave. Texts are i18n keys; `correct` is null until answered. */
@@ -189,6 +215,35 @@ function postmortem(v: unknown, path: string): Postmortem {
   };
 }
 
+function bool(v: unknown, path: string): boolean {
+  if (typeof v !== 'boolean') throw new ProtocolError(`${path}: expected boolean`);
+  return v;
+}
+
+function waveResult(v: unknown, path: string): WaveResult {
+  const o = object(v, path);
+  keys(o, path, ['wave', 'survived', 'shield', 'earned', 'postmortemRight']);
+  return {
+    wave: num(o['wave'], `${path}.wave`),
+    survived: bool(o['survived'], `${path}.survived`),
+    shield: num(o['shield'], `${path}.shield`),
+    earned: num(o['earned'], `${path}.earned`),
+    postmortemRight: nullable(o['postmortemRight'], `${path}.postmortemRight`, bool),
+  };
+}
+
+function chapterSummary(v: unknown, path: string): ChapterSummary {
+  const o = object(v, path);
+  keys(o, path, ['number', 'stars', 'averageShield', 'postmortemsRight', 'postmortems']);
+  return {
+    number: num(o['number'], `${path}.number`),
+    stars: num(o['stars'], `${path}.stars`),
+    averageShield: num(o['averageShield'], `${path}.averageShield`),
+    postmortemsRight: num(o['postmortemsRight'], `${path}.postmortemsRight`),
+    postmortems: num(o['postmortems'], `${path}.postmortems`),
+  };
+}
+
 function catalogOption(v: unknown, path: string): CatalogOption {
   const o = object(v, path);
   keys(o, path, ['id', 'name', 'applyTimeS', 'tradeoff']);
@@ -270,8 +325,8 @@ export function parseServerMessage(v: unknown): ServerMessage {
         snapshotHz: num(o['snapshotHz'], 'welcome.snapshotHz'),
       };
     case 'snapshot': {
-      keys(o, 'snapshot', ['type', 'tick', 'credits', 'wave', 'phase', 'shield', 'metrics', 'signals'],
-        ['insights', 'counters', 'postmortem', 'codex']);
+      keys(o, 'snapshot', ['type', 'tick', 'credits', 'wave', 'phase', 'shield', 'burnRate', 'shieldEmptyInS',
+        'metrics', 'signals'], ['insights', 'counters', 'postmortem', 'codex', 'results', 'chapter']);
       const phase = str(o['phase'], 'snapshot.phase');
       if (!PHASES.includes(phase)) throw new ProtocolError(`snapshot.phase: unknown ${phase}`);
       const s: Snapshot = {
@@ -281,6 +336,8 @@ export function parseServerMessage(v: unknown): ServerMessage {
         wave: num(o['wave'], 'snapshot.wave'),
         phase: phase as Phase,
         shield: num(o['shield'], 'snapshot.shield'),
+        burnRate: num(o['burnRate'], 'snapshot.burnRate'),
+        shieldEmptyInS: num(o['shieldEmptyInS'], 'snapshot.shieldEmptyInS'),
         metrics: metrics(o['metrics'], 'snapshot.metrics'),
         signals: strings(o['signals'], 'snapshot.signals'),
       };
@@ -288,6 +345,8 @@ export function parseServerMessage(v: unknown): ServerMessage {
       if (o['counters'] !== undefined) s.counters = list(o['counters'], 'snapshot.counters', installed);
       if (o['postmortem'] !== undefined) s.postmortem = postmortem(o['postmortem'], 'snapshot.postmortem');
       if (o['codex'] !== undefined) s.codex = strings(o['codex'], 'snapshot.codex');
+      if (o['results'] !== undefined) s.results = list(o['results'], 'snapshot.results', waveResult);
+      if (o['chapter'] !== undefined) s.chapter = chapterSummary(o['chapter'], 'snapshot.chapter');
       return s;
     }
     case 'rejected':

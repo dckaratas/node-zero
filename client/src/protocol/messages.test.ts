@@ -14,7 +14,8 @@ const fixture = (n: string): unknown => JSON.parse(serverFixtures[`./fixtures/se
 describe('server → client contract', () => {
   it('has a fixture for every message type', () => {
     expect(Object.keys(serverFixtures).map(name).sort()).toEqual(
-      ['catalog', 'codex', 'error', 'paused', 'rejected', 'snapshot-delta', 'snapshot-keyframe', 'snapshot-postmortem', 'welcome']);
+      ['catalog', 'codex', 'error', 'paused', 'rejected', 'snapshot-burning', 'snapshot-chapter', 'snapshot-delta',
+        'snapshot-keyframe', 'snapshot-postmortem', 'welcome']);
   });
 
   // catalog and codex are HTTP bodies, not socket messages.
@@ -50,6 +51,21 @@ describe('server → client contract', () => {
     expect(pm?.questionKey).toBe('pm.log_storm.q');
     expect(pm?.options).toHaveLength(4);
     expect(pm?.correct).toBeNull();
+  });
+
+  it('sends how fast the shield burns', () => {
+    const s = parseServerMessage(fixture('snapshot-burning'));
+    expect(s.type === 'snapshot' && s.burnRate).toBeGreaterThan(1);
+    expect(s.type === 'snapshot' && s.shieldEmptyInS).toBeGreaterThan(0);
+  });
+
+  it('sends wave results and the chapter summary once it is won', () => {
+    const s = parseServerMessage(fixture('snapshot-chapter'));
+    if (s.type !== 'snapshot') throw new Error('expected a snapshot');
+    expect(s.results?.map((r) => r.wave)).toEqual([1, 2, 3, 4, 5]);
+    expect(s.results?.[0]?.postmortemRight).toBeNull();
+    expect(s.chapter?.postmortemsRight).toBe(4);
+    expect(parseServerMessage(fixture('snapshot-keyframe'))).not.toHaveProperty('chapter');
   });
 
   it('parses the codex sample strictly', () => {

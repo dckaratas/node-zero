@@ -35,6 +35,7 @@ public final class Rules {
     private final Content content;
     private final GameBalance balance;
     private final ThreatDef[] threatByWave;
+    private final int chapter;
     private final Map<String, CounterRules> counters;
 
     public Rules(StationLayout station, Content content) {
@@ -53,6 +54,7 @@ public final class Rules {
             throw new IllegalArgumentException("invalid rules:\n  - " + String.join("\n  - ", problems));
         }
         this.threatByWave = indexByWave();
+        this.chapter = content.threats().values().stream().mapToInt(ThreatDef::chapter).findFirst().orElse(1);
     }
 
     public StationLayout station() {
@@ -65,6 +67,16 @@ public final class Rules {
 
     public GameBalance balance() {
         return balance;
+    }
+
+    /** The last wave of the chapter: the highest wave a threat arrives in. */
+    public int lastWave() {
+        return threatByWave.length - 1;
+    }
+
+    /** The chapter being played, from its threats; one chapter per game until chapter 2 brings a campaign. */
+    public int chapter() {
+        return chapter;
     }
 
     /** The threat a wave brings, or {@code null} for a quiet wave. */

@@ -99,6 +99,18 @@ codex:
 
         predict_linear(node_filesystem_avail_bytes[6h], 4 * 3600) < 0, disk mevcut hızla dört saat içinde dolacaksa tetiklenir; sakin müdahale için yeterince erken. Düz bir "disk %90'ın üstünde" alarmı hızlı dolumda çok geç, aylarca büyüyen bir diskte ise çok erken çalar.
 
+  - id: burn-rate
+    title: { en: "Error budget burn rate", tr: "Hata bütçesi yakma hızı" }
+    body:
+      en: |-
+        An SLO of 99 % leaves an error budget of 1 %: that share of requests may fail or be too slow. The burn rate says how fast the budget is being spent compared with the pace that would last exactly the whole period. A burn rate of 1 empties it right at the end; 14 empties it in a fourteenth of the time.
+
+        Alerting on the burn rate instead of on raw errors tells you how urgent a problem is. The Google SRE Workbook pages at 14.4× over an hour, which spends 2 % of a 30-day budget, and opens a ticket for slow burns. The shield in NODE ZERO is the budget of one wave, and its burn rate and time left are shown next to it.
+      tr: |-
+        %99'luk bir SLO, %1'lik bir hata bütçesi bırakır: isteklerin bu kadarı başarısız olabilir ya da yavaş kalabilir. Yakma hızı, bütçenin tam dönem sonuna yetecek hıza göre ne kadar hızlı harcandığını söyler. Yakma hızı 1 ise bütçe tam dönem sonunda biter; 14 ise sürenin on dörtte birinde.
+
+        Ham hata sayısı yerine yakma hızına alarm kurmak, sorunun ne kadar acil olduğunu söyler. Google SRE Workbook bir saat boyunca 14,4× yakmada nöbetçiyi uyandırır (30 günlük bütçenin %2'si) ve yavaş yakmalar için kayıt açar. NODE ZERO'daki kalkan bir dalganın bütçesidir; yakma hızı ve kalan süre yanında görünür.
+
   - id: traffic-heatmap
     title: { en: "Traffic heatmaps", tr: "Trafik ısı haritaları" }
     body:

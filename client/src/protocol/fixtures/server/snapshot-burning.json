@@ -1,0 +1,16 @@
+{
+  "type" : "snapshot",
+  "tick" : 103,
+  "credits" : 1000,
+  "wave" : 3,
+  "phase" : "RUNNING",
+  "shield" : 0.9326666666666668,
+  "burnRate" : 80.79999999999993,
+  "shieldEmptyInS" : 1.3851485148514866,
+  "metrics" : { },
+  "signals" : [ ],
+  "insights" : [ ],
+  "counters" : [ ],
+  "codex" : [ ],
+  "results" : [ ]
+}

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.nodezero.sim.engine.Observation;
+import com.nodezero.sim.state.WaveResult;
 import com.nodezero.sim.state.WaveState;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +33,9 @@ public sealed interface ServerMessage {
 
     /**
      * The player's fog-of-war view ({@link Observation}), flattened. Sent only when something changed
-     * ({@link SnapshotStream}); {@code insights}, {@code counters} and {@code codex} are omitted (null) when unchanged
-     * since the previous snapshot, so the client keeps its last copy. {@code postmortem} is sent whenever
-     * one is open or just answered, and absent otherwise.
+     * ({@link SnapshotStream}); {@code insights}, {@code counters}, {@code codex} and {@code results} are omitted (null)
+     * when unchanged since the previous snapshot, so the client keeps its last copy. {@code postmortem} is sent whenever
+     * one is open or just answered, and absent otherwise; {@code chapter} likewise once the chapter is won.
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record Snapshot(
@@ -43,17 +44,22 @@ public sealed interface ServerMessage {
             int wave,
             WaveState.Phase phase,
             double shield,
+            double burnRate,
+            double shieldEmptyInS,
             Map<String, Double> metrics,
             List<String> signals,
             List<String> insights,
             List<Observation.Counter> counters,
             Observation.Postmortem postmortem,
-            List<String> codex) implements ServerMessage {
+            List<String> codex,
+            List<WaveResult> results,
+            Observation.Chapter chapter) implements ServerMessage {
 
         /** Every field present: a keyframe. */
         public static Snapshot full(Observation o) {
-            return new Snapshot(o.tick(), o.credits(), o.wave(), o.phase(), o.shield(),
-                    o.metrics(), o.signals(), o.insights(), o.counters(), o.postmortem(), o.codex());
+            return new Snapshot(o.tick(), o.credits(), o.wave(), o.phase(), o.shield(), o.burnRate(), o.shieldEmptyInS(),
+                    o.metrics(), o.signals(), o.insights(), o.counters(), o.postmortem(), o.codex(), o.results(),
+                    o.chapter());
         }
     }
 

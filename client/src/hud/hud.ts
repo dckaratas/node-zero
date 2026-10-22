@@ -1,4 +1,5 @@
 import { LANGUAGES, type ContentLanguage } from '../game/language';
+import { burnText, shieldLevel } from '../game/shield';
 import type { View } from '../game/store';
 import type { ConnectionStatus } from '../net/connection';
 import type { ClientAction } from '../protocol/messages';
@@ -14,6 +15,8 @@ export class Hud {
   private readonly credits = el('span', 'credits');
   private readonly shieldBar = el('div', 'shield-bar');
   private readonly shield = el('div', 'shield');
+  private readonly shieldLabel = el('span', 'shield-label');
+  private readonly burn = el('span', 'burn');
   private readonly status = el('span', 'status');
   private readonly notice = el('div', 'notice');
   private readonly startWave = button('Start wave');
@@ -33,12 +36,12 @@ export class Hud {
     this.shield.setAttribute('aria-label', 'Error budget');
     this.shield.setAttribute('aria-valuemin', '0');
     this.shield.setAttribute('aria-valuemax', '100');
-    this.shield.append(this.shieldBar);
+    this.shield.append(this.shieldBar, this.shieldLabel);
     this.language.className = 'language';
     this.language.setAttribute('aria-label', 'Content language');
     this.language.title = 'Language of threats, modules, postmortems and the codex';
     this.language.append(...LANGUAGES.map((l) => new Option(l.label, l.code)));
-    top.append(this.wave, this.phase, this.clock, this.shield, this.credits, this.startWave, this.pause, this.status,
+    top.append(this.wave, this.phase, this.clock, this.shield, this.burn, this.credits, this.startWave, this.pause, this.status,
       this.language);
     // Codex above the long module list: closed articles are one line each.
     panel.append(heading('Signals'), this.signals, this.notice, this.codexHost, heading('Modules'), this.countersHost,
@@ -75,12 +78,17 @@ export class Hud {
     this.shieldBar.style.width = `${shield}%`;
     this.shield.setAttribute('aria-valuenow', String(shield));
     this.shield.title = `Error budget ${shield}%`;
+    this.shield.dataset['level'] = shieldLevel(view.shield);
+    this.shieldLabel.textContent = `Shield ${shield}%`;
+    this.burn.textContent = view.phase === 'RUNNING' ? burnText(view.burnRate, view.shieldEmptyInS) : '';
 
     // A failed wave is retried; otherwise the next one.
     this.nextWave = view.phase === 'FAILED' ? Math.max(1, view.wave) : view.wave + 1;
-    this.startWave.textContent = `Start wave ${this.nextWave}`;
     const reviewOpen = view.postmortem !== null && view.postmortem.chosen === null;
-    this.startWave.disabled = view.phase === 'RUNNING' || reviewOpen;
+    // No game over and no wave after the last (decision AE): a won chapter ends the run.
+    const chapter = view.chapter;
+    this.startWave.textContent = chapter === null ? `Start wave ${this.nextWave}` : `Chapter ${chapter.number} complete`;
+    this.startWave.disabled = view.phase === 'RUNNING' || reviewOpen || chapter !== null;
     this.startWave.title = reviewOpen ? 'Answer the postmortem first' : '';
 
     this.renderMetrics(view.metrics);

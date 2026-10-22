@@ -5,6 +5,8 @@
   "wave" : 1,
   "phase" : "RUNNING",
   "shield" : 1.0,
+  "burnRate" : 0.0,
+  "shieldEmptyInS" : -1.0,
   "metrics" : {
     "request_rate" : 100.0,
     "cpu_utilization" : 0.5,

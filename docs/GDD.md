@@ -41,6 +41,7 @@ Web tabanlı, eğitici bir **bilim kurgu tower defense + sunucu tasarım/yöneti
 | 15 | Oyun sunucusu | Bellekte oturum + replay günlüğü, çekirdek başına tick shard'ı, ham WebSocket + JSON | [0015](adr/0015-game-server-architecture.md) |
 | 16 | İstemci | Vite + TS + PixiJS, sözleşme fixture'ları, sunucuda filtrelenen katalog | [0016](adr/0016-browser-client.md) |
 | 17 | Postmortem/kodeks/i18n | Zorunlu tek denemelik postmortem, sunucuda açılan kodeks, public i18n paketi | [0017](adr/0017-postmortem-codex-i18n.md) |
+| 18 | Olay anı oynanışı | Yakma hızı ve bölüm sonu (7a); müdahale + mürettebat, kaldırma, alarm sırada | [0018](adr/0018-incident-gameplay.md) |
 
 ## 3. Oyun döngüsü
 ```
@@ -56,7 +57,8 @@ Hazırlık ──► Dalga ──► Postmortem ──► Araştırma ──┐
 |---|---|
 | Kalkan (hata bütçesi) | Dalga başına: beklenen isteklerin %1'i (SLO %99). Kalkan = harcanmamış bütçe oranı |
 | Başarısız istek | Ret (Tomcat, Hikari, CPU kuyruğu) + 429 + kesinti + statement timeout + yazma kilidi + dolu diskte yazma + **gecikmesi > 500 ms olan istekler** |
-| Dalga sonu | Trafik şekli bitince `COMPLETE`; kalkan sıfırlanırsa `FAILED` (ödül yok) |
+| Dalga sonu | Trafik şekli bitince `COMPLETE`; kalkan sıfırlanırsa `FAILED` (ödül yok, tam ekran bildirim). Kalkanın yanında yakma hızı ve kalan süre (ADR-0018) |
+| Bölüm sonu (Dilim 7a) | Son dalga kazanılıp postmortemi cevaplanınca özet + 1–3 yıldız (bitirmek, ortalama kalkan ≥ %50, tüm kök nedenler doğru). Game over yok |
 | Ödül | `round(300 × kalan kalkan) − kurulu karşı aksiyonların upkeep toplamı` |
 | Postmortem (Dilim 6a) | Tehditli dalga bitince (COMPLETE/FAILED) açılır; cevaplanmadan sonraki dalga başlamaz; tek deneme, tehdit başına bir kez; doğru → +100 kr; cevap önceden gönderilmez (ADR-0017) |
 | Kalıcı tehditler | `persists: true` olanlar (DEBUG log, büyüyen tablo, günlük job) sonraki dalgalarda da etkili: teknik borç |

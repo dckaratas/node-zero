@@ -51,9 +51,22 @@ final class Observer {
 
         List<Observation.Counter> counters = new ArrayList<>();
         p.counters().forEach(c -> counters.add(new Observation.Counter(c.id(), c.option(), c.activeTick())));
-        return new Observation(s.tick(), p.credits(), wave.number(), wave.phase(),
-                wave.shield(rules.balance().slo()), metrics, signals, p.insights(), counters, postmortem(p),
-                p.codex());
+        double slo = rules.balance().slo();
+        double shield = wave.shield(slo);
+        double burnRate = 0;
+        double emptyInS = -1;
+        if (wave.phase() == WaveState.Phase.RUNNING && wave.lastFailedRps() > 0) {
+            // The budget lasts the whole wave at allowance / duration failures per second (burn rate 1).
+            double allowance = (1 - slo) * wave.expectedRequests();
+            if (allowance > 0 && wave.durationS() > 0) {
+                burnRate = wave.lastFailedRps() / (allowance / wave.durationS());
+                emptyInS = shield * allowance / wave.lastFailedRps();
+            }
+        }
+        Observation.Chapter chapter = ChapterScore.summary(rules.chapter(), rules.lastWave(), p.results(),
+                p.postmortem());
+        return new Observation(s.tick(), p.credits(), wave.number(), wave.phase(), shield, burnRate, emptyInS,
+                metrics, signals, p.insights(), counters, postmortem(p), p.codex(), p.results(), chapter);
     }
 
     private Observation.Postmortem postmortem(Progress p) {

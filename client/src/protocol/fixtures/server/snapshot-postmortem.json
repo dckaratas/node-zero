@@ -5,6 +5,8 @@
   "wave" : 2,
   "phase" : "COMPLETE",
   "shield" : 1.0,
+  "burnRate" : 0.0,
+  "shieldEmptyInS" : -1.0,
   "metrics" : { },
   "signals" : [ ],
   "insights" : [ ],
@@ -28,5 +30,12 @@
     "chosen" : null,
     "correct" : null
   },
-  "codex" : [ ]
+  "codex" : [ ],
+  "results" : [ {
+    "wave" : 2,
+    "survived" : true,
+    "shield" : 1.0,
+    "earned" : 300,
+    "postmortemRight" : null
+  } ]
 }

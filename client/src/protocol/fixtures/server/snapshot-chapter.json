@@ -1,0 +1,72 @@
+{
+  "type" : "snapshot",
+  "tick" : 5404,
+  "credits" : 1950,
+  "wave" : 5,
+  "phase" : "COMPLETE",
+  "shield" : 0.0,
+  "burnRate" : 0.0,
+  "shieldEmptyInS" : -1.0,
+  "metrics" : { },
+  "signals" : [ ],
+  "insights" : [ ],
+  "counters" : [ ],
+  "postmortem" : {
+    "wave" : 5,
+    "questionKey" : "pm.nightly_job.q",
+    "options" : [ {
+      "id" : "a",
+      "key" : "pm.nightly_job.db_too_small"
+    }, {
+      "id" : "b",
+      "key" : "pm.nightly_job.job_bug"
+    }, {
+      "id" : "c",
+      "key" : "pm.nightly_job.shared_resources_peak_hour"
+    }, {
+      "id" : "d",
+      "key" : "pm.nightly_job.network"
+    } ],
+    "chosen" : "c",
+    "correct" : "c"
+  },
+  "codex" : [ "fill-model", "log-levels", "logrotate", "predict-linear", "burn-rate", "utilization-law", "vertical-vs-horizontal", "rate-limiting", "http-429-vs-503", "tomcat-threads", "occupancy-model", "littles-law", "use-method", "db-indexes", "create-index-concurrently", "statement-timeout", "bulkhead", "retry-amplification", "cron-timezones", "batch-chunking" ],
+  "results" : [ {
+    "wave" : 1,
+    "survived" : true,
+    "shield" : 1.0,
+    "earned" : 300,
+    "postmortemRight" : null
+  }, {
+    "wave" : 2,
+    "survived" : true,
+    "shield" : 0.8333333333333335,
+    "earned" : 250,
+    "postmortemRight" : true
+  }, {
+    "wave" : 3,
+    "survived" : true,
+    "shield" : 0.0,
+    "earned" : 0,
+    "postmortemRight" : true
+  }, {
+    "wave" : 4,
+    "survived" : true,
+    "shield" : 0.0,
+    "earned" : 0,
+    "postmortemRight" : true
+  }, {
+    "wave" : 5,
+    "survived" : true,
+    "shield" : 0.0,
+    "earned" : 0,
+    "postmortemRight" : true
+  } ],
+  "chapter" : {
+    "number" : 1,
+    "stars" : 2,
+    "averageShield" : 0.3666666666666667,
+    "postmortemsRight" : 4,
+    "postmortems" : 4
+  }
+}

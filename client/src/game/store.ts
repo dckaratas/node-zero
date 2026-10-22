@@ -1,4 +1,4 @@
-import type { InstalledCounter, Phase, Postmortem, Snapshot } from '../protocol/messages';
+import type { ChapterSummary, InstalledCounter, Phase, Postmortem, Snapshot, WaveResult } from '../protocol/messages';
 
 /** A complete view: snapshot deltas merged onto what the client already knows. */
 export interface View {
@@ -7,12 +7,16 @@ export interface View {
   wave: number;
   phase: Phase;
   shield: number;
+  burnRate: number;
+  shieldEmptyInS: number;
   metrics: Readonly<Record<string, number>>;
   signals: readonly string[];
   insights: readonly string[];
   counters: readonly InstalledCounter[];
   postmortem: Postmortem | null;
   codex: readonly string[];
+  results: readonly WaveResult[];
+  chapter: ChapterSummary | null;
 }
 
 /**
@@ -47,12 +51,16 @@ export class GameStore {
       wave: s.wave,
       phase: s.phase,
       shield: s.shield,
+      burnRate: s.burnRate,
+      shieldEmptyInS: s.shieldEmptyInS,
       metrics: s.metrics,
       signals: s.signals,
       insights: s.insights ?? base?.insights ?? [],
       counters: s.counters ?? base?.counters ?? [],
       postmortem: s.postmortem ?? null,
       codex: s.codex ?? base?.codex ?? [],
+      results: s.results ?? base?.results ?? [],
+      chapter: s.chapter ?? null,
     };
     this.previous = base ?? view;
     this.latest = view;

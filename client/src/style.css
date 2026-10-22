@@ -161,3 +161,45 @@ dialog.postmortem .footer p { margin: 0; }
   padding: 3px 6px;
 }
 .hud select.language:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+
+/* Shield notices and chapter summary (slice 7a) */
+.hud .shield { position: relative; width: 200px; height: 18px; border-radius: 9px; }
+.hud .shield-label {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; font-variant-numeric: tabular-nums; text-shadow: 0 0 3px #000;
+}
+.hud .shield[data-level='warn'] .shield-bar { background: var(--warn); }
+.hud .shield[data-level='danger'] .shield-bar, .hud .shield[data-level='empty'] .shield-bar { background: var(--bad); }
+.hud .shield.flash { animation: shield-flash 0.4s ease-in-out 3; }
+@keyframes shield-flash { 50% { box-shadow: 0 0 0 3px var(--bad); } }
+.hud .burn { font-size: 0.85rem; color: var(--warn); font-variant-numeric: tabular-nums; }
+.hud .burn:empty { display: none; }
+
+.shield-toast {
+  position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 10;
+  padding: 8px 16px; border-radius: 6px; font-weight: 700;
+  background: var(--warn); color: #1a1200;
+}
+.shield-toast[data-level='danger'] { background: var(--bad); color: #fff; }
+.shield-collapse {
+  position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 16px;
+  background: radial-gradient(circle, rgb(120 20 30 / 0.85), rgb(20 4 8 / 0.92));
+  animation: collapse-in 0.3s ease-out;
+}
+.shield-collapse strong { font-size: clamp(2rem, 8vw, 4rem); letter-spacing: 0.12em; color: #ffd6d6; }
+.shield-collapse p { margin: 0; font-size: 1.1rem; }
+@keyframes collapse-in { from { opacity: 0; transform: scale(1.05); } }
+.shield-toast[hidden], .shield-collapse[hidden] { display: none; }
+
+dialog.chapter {
+  width: min(520px, calc(100vw - 32px)); padding: 20px 24px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--muted); border-radius: 10px;
+}
+dialog.chapter::backdrop { background: rgb(5 8 18 / 0.7); }
+dialog.chapter h2 { margin: 0; font-size: 1.2rem; }
+dialog.chapter .stars { margin: 4px 0 12px; font-size: 2rem; color: var(--warn); letter-spacing: 0.1em; }
+dialog.chapter table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+dialog.chapter th, dialog.chapter td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--line); }
+dialog.chapter th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+dialog.chapter ul { padding-left: 0; list-style: none; color: var(--muted); }

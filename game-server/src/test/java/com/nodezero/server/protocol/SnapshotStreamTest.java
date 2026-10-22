@@ -17,8 +17,8 @@ class SnapshotStreamTest {
         List<Observation.Counter> counters = counterIds.stream().map(id -> new Observation.Counter(id, null, 0)).toList();
         Map<String, Double> metrics = new LinkedHashMap<>();
         metrics.put("node_cpu_utilization", cpu);
-        return new Observation(tick, 1000, 0, WaveState.Phase.PREPARATION, 1.0, metrics,
-                List.of(), List.of(), counters, null, List.of());
+        return new Observation(tick, 1000, 0, WaveState.Phase.PREPARATION, 1.0, 0, -1, metrics,
+                List.of(), List.of(), counters, null, List.of(), List.of(), null);
     }
 
     @Test

@@ -2,11 +2,14 @@ import './style.css';
 import { loadLanguage, saveLanguage, type ContentLanguage } from './game/language';
 import { Orders } from './game/orders';
 import { Review } from './game/postmortem';
+import { shieldAlert } from './game/shield';
 import { GameStore } from './game/store';
+import { ChapterDialog } from './hud/chapterDialog';
 import { CodexPanel } from './hud/codexPanel';
 import { CounterPanel } from './hud/counterPanel';
 import { Hud } from './hud/hud';
 import { PostmortemDialog } from './hud/postmortemDialog';
+import { ShieldAlerts } from './hud/shieldAlerts';
 import { StationMap } from './map/stationMap';
 import { Connection } from './net/connection';
 import { Texts } from './net/i18n';
@@ -51,7 +54,11 @@ const connection = new Connection(Connection.defaultUrl(), {
         hud.showNotice(`Session ${message.session.slice(0, 8)} · seed ${message.seed}`);
         break;
       case 'snapshot': {
+        const before = store.current();
         const view = store.apply(message, performance.now());
+        // Threshold toasts and the collapse notice (decision AD); compared on raw views, not blended ones.
+        const alert = shieldAlert(before, view);
+        if (alert !== null) shieldAlerts.show(alert, view.wave, performance.now());
         orders.confirm(view.counters);
         // New insights can reveal counters (decision W): ask the server for this session's catalog again.
         const key = view.insights.join('|');
@@ -110,13 +117,19 @@ const codex = new SessionResource('codex', parseCodex, (c) => codexPanel.show(c)
 const postmortem = new PostmortemDialog(review, texts, (wave, option) => {
   if (send({ type: 'answer_postmortem', option })) review.sent(wave, option);
 });
+const shieldAlerts = new ShieldAlerts(() => document.querySelector<HTMLElement>('.hud .shield'));
+const chapter = new ChapterDialog();
 
 map.ticker.add((ticker) => {
-  const view = store.sample(performance.now());
+  const now = performance.now();
+  const view = store.sample(now);
   map.render(view, ticker.deltaMS);
   hud.render(view, view === undefined || !orders.hasPending() ? undefined : orders.projectedCredits(view));
   panel.render(store.current());
-  postmortem.render(store.current()?.postmortem ?? null);
+  const latest = store.current();
+  // The collapse notice comes first; the summary waits until the last postmortem is closed.
+  postmortem.render(shieldAlerts.blocking(now) ? null : latest?.postmortem ?? null);
+  if (!postmortem.isOpen()) chapter.render(latest?.chapter ?? null, latest?.results ?? []);
 });
 
 hud.setContentLanguage(language);

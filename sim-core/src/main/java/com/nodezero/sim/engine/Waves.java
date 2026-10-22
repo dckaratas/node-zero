@@ -10,6 +10,7 @@ import com.nodezero.sim.state.InstalledCounter;
 import com.nodezero.sim.state.PostmortemState;
 import com.nodezero.sim.state.Progress;
 import com.nodezero.sim.state.ResourceId;
+import com.nodezero.sim.state.WaveResult;
 import com.nodezero.sim.state.WaveState;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,10 @@ final class Waves {
         Progress p = s.progress();
         if (p.wave().phase() == WaveState.Phase.RUNNING) {
             throw new IllegalArgumentException("wave " + p.wave().number() + " is still running");
+        }
+        if (number > rules.lastWave()) {
+            throw new IllegalArgumentException(
+                    "chapter " + rules.chapter() + " ends at wave " + rules.lastWave() + ": no wave " + number);
         }
         if (p.postmortem() != null && !p.postmortem().answered()) {
             throw new IllegalArgumentException(
@@ -77,7 +82,8 @@ final class Waves {
         WaveState booked = wave.record(
                 plan.arrivalsRps() * SimConstants.DT, failedRps * SimConstants.DT, failedRps, tick);
         if (balance.endWaveOnEmptyShield() && booked.shield(balance.slo()) <= 0) {
-            return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.FAILED))));
+            WaveResult failed = new WaveResult(wave.number(), false, booked.shield(balance.slo()), 0, null);
+            return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.FAILED)).withResult(failed)));
         }
         if ((tick - wave.startTick() + 1) * SimConstants.DT >= wave.durationS() - 1e-9) {
             return complete(s, p, booked);
@@ -91,7 +97,8 @@ final class Waves {
         for (InstalledCounter c : p.counters()) {
             upkeep += rules.counter(c.id()).def().cost().upkeepPerWave();
         }
-        int reward = (int) Math.round(balance.waveReward() * booked.shield(balance.slo()));
+        double shield = booked.shield(balance.slo());
+        int reward = (int) Math.round(balance.waveReward() * shield);
 
         List<ActiveThreat> remaining = new ArrayList<>();
         for (ActiveThreat t : p.activeThreats()) {
@@ -99,7 +106,8 @@ final class Waves {
                 remaining.add(t);
             }
         }
-        return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.COMPLETE)))
+        WaveResult result = new WaveResult(booked.number(), true, shield, reward - upkeep, null);
+        return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.COMPLETE)).withResult(result))
                 .withCredits(p.credits() + reward - upkeep)
                 .withActiveThreats(remaining));
     }
@@ -125,7 +133,9 @@ final class Waves {
         }
         int bonus = chosen.correct() ? rules.balance().postmortemBonus() : 0;
         // The threat's codex entries open now, not when it arrives: they would give the answer away.
-        return s.withProgress(p.withPostmortem(pm.answer(optionId)).withCredits(p.credits() + bonus)
+        return s.withProgress(p.withPostmortem(pm.answer(optionId))
+                .withPostmortemVerdict(pm.wave(), chosen.correct())
+                .withCredits(p.credits() + bonus)
                 .withCodex(rules.content().threat(pm.threatId()).codex()));
     }
 
