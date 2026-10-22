@@ -71,6 +71,8 @@ export interface StationCapacity {
   diskMb: number;
   dbCpuCores: number;
   dbIoDisks: number;
+  /** The app is stopped (restart, rollback, CPU swap): Tomcat and CPU show DOWN. */
+  appDown: boolean;
 }
 
 /** An alert rule: pending while `metric op threshold` holds, firing once it has held for forS. */
@@ -380,7 +382,7 @@ function catalogAction(v: unknown, path: string): CatalogAction {
 
 function stationCapacity(v: unknown, path: string): StationCapacity {
   const o = object(v, path);
-  keys(o, path, ['cpuCores', 'threads', 'dbPool', 'diskMb', 'dbCpuCores', 'dbIoDisks']);
+  keys(o, path, ['cpuCores', 'threads', 'dbPool', 'diskMb', 'dbCpuCores', 'dbIoDisks', 'appDown']);
   return {
     cpuCores: num(o['cpuCores'], `${path}.cpuCores`),
     threads: num(o['threads'], `${path}.threads`),
@@ -388,6 +390,7 @@ function stationCapacity(v: unknown, path: string): StationCapacity {
     diskMb: num(o['diskMb'], `${path}.diskMb`),
     dbCpuCores: num(o['dbCpuCores'], `${path}.dbCpuCores`),
     dbIoDisks: num(o['dbIoDisks'], `${path}.dbIoDisks`),
+    appDown: bool(o['appDown'], `${path}.appDown`),
   };
 }
 

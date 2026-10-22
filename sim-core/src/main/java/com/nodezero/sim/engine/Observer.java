@@ -25,9 +25,11 @@ final class Observer {
     private static final String DEFAULT_SIGNAL = "user_complaints";
 
     private final Rules rules;
+    private final Pipeline pipeline;
 
-    Observer(Rules rules) {
+    Observer(Rules rules, Pipeline pipeline) {
         this.rules = rules;
+        this.pipeline = pipeline;
     }
 
     Observation observe(GameState s) {
@@ -75,14 +77,15 @@ final class Observer {
                 p.ops().crew(), p.ops().runs(), p.ops().alerts(), station(s));
     }
 
-    private static Observation.Station station(GameState s) {
+    private Observation.Station station(GameState s) {
         return new Observation.Station(
                 ((UtilizationModel) s.resource(ResourceId.CPU).model()).servers(),
                 ((OccupancyModel) s.resource(ResourceId.THREADS).model()).poolSize(),
                 ((OccupancyModel) s.resource(ResourceId.DB_POOL).model()).poolSize(),
                 ((FillModel) s.resource(ResourceId.DISK).model()).capacity(),
                 ((UtilizationModel) s.resource(ResourceId.DB_CPU).model()).servers(),
-                ((UtilizationModel) s.resource(ResourceId.DB_IO).model()).servers());
+                ((UtilizationModel) s.resource(ResourceId.DB_IO).model()).servers(),
+                pipeline.appDown(s.progress(), s.tick()));
     }
 
     private Observation.Postmortem postmortem(Progress p) {

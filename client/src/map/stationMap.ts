@@ -1,24 +1,30 @@
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import type { View } from '../game/store';
+import { queueDots, redDots, type NodeMarks } from '../game/mapFeedback';
 import { LINKS, loadColor, NODE01, NODES, type StationNode } from '../game/station';
 import { hexCorners, hexToPixel, type Point } from './hex';
 
 /** Grid spacing; hexes are drawn smaller so the pipes between them show. */
 const HEX_SIZE = 72;
 const DRAWN_SIZE = 54;
+const FLOW_DOTS = 6;
+const DOWN_COLOR = 0x2a2f3d;
 
 interface NodeSprite {
   node: StationNode;
   centre: Point;
   hex: Graphics;
   value: Text;
+  /** Badge, progress ring and queue stack (slice 8b). */
+  marks: Graphics;
+  badge: Text;
 }
 
 /**
  * The station drawn with PixiJS (slice 5 decision Q: canvas for the map, DOM for text-heavy UI).
  * Hexes are redrawn each frame from the interpolated view; with seven nodes that is cheaper than
  * diffing. Request flow is shown as dots moving along the pipes, faster with more traffic, and only
- * when the request rate is measurable.
+ * when the request rate is measurable; a share of them turns red with the measured error rate (slice 8b).
  */
 export class StationMap {
   private readonly app = new Application();
@@ -52,8 +58,12 @@ export class StationMap {
       value.anchor.set(0.5);
       label.position.set(centre.x, centre.y - 12);
       value.position.set(centre.x, centre.y + 12);
-      this.world.addChild(hex, label, value);
-      this.sprites.push({ node, centre, hex, value });
+      const marks = new Graphics();
+      const badge = new Text({ text: '', style: { fill: 0xffffff, fontSize: 12, fontWeight: 'bold', fontFamily: 'system-ui' } });
+      badge.anchor.set(0.5);
+      badge.position.set(centre.x + DRAWN_SIZE * 0.62, centre.y - DRAWN_SIZE * 0.72);
+      this.world.addChild(hex, label, value, marks, badge);
+      this.sprites.push({ node, centre, hex, value, marks, badge });
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'map-node';
@@ -73,8 +83,10 @@ export class StationMap {
   /**
    * Called every frame with the interpolated view.
    * @param alerting nodes with a firing alert rule (slice 7d): their outline pulses red
+   * @param marks badges, progress rings and DOWN per node (slice 8b)
    */
-  render(view: View | undefined, deltaMs: number, alerting: ReadonlySet<string> = new Set()): void {
+  render(view: View | undefined, deltaMs: number, alerting: ReadonlySet<string> = new Set(),
+    marks: ReadonlyMap<string, NodeMarks> = new Map()): void {
     const metrics = view?.metrics ?? {};
     this.alertPhase = (this.alertPhase + deltaMs / 600) % (2 * Math.PI);
     const pulse = 0.55 + 0.45 * Math.sin(this.alertPhase);
@@ -85,12 +97,16 @@ export class StationMap {
         : s.node.id === this.selected
           ? { width: 4, color: 0xffffff, alpha: 0.95 }
           : { width: 2, color: 0x8fa3d9, alpha: 0.6 };
+      const m = marks.get(s.node.id);
+      const down = m?.down === true;
       s.hex.clear()
-        .poly(hexCorners(s.centre, DRAWN_SIZE)).fill({ color: loadColor(load) })
+        .poly(hexCorners(s.centre, DRAWN_SIZE)).fill({ color: down ? DOWN_COLOR : loadColor(load) })
         .stroke(outline);
-      s.value.text = load === undefined ? (s.node.id === 'gateway' ? '' : '?') : `${Math.round(load * 100)}%`;
+      s.value.text = down ? 'DOWN'
+        : load === undefined ? (s.node.id === 'gateway' ? '' : '?') : `${Math.round(load * 100)}%`;
+      this.drawMarks(s, m, s.node.id === 'db_pool' ? queueDots(metrics['hikaricp_connections_pending']) : 0);
     }
-    this.drawFlow(metrics['request_rate'], deltaMs);
+    this.drawFlow(metrics['request_rate'], metrics['error_rate'], deltaMs);
   }
 
   /** The player picked a node (or {@code null} to close the inspector). */
@@ -113,20 +129,43 @@ export class StationMap {
     this.pipes.stroke({ width: 6, color: 0x26304a });
   }
 
-  private drawFlow(requestRate: number | undefined, deltaMs: number): void {
+  private drawMarks(s: NodeSprite, m: NodeMarks | undefined, queued: number): void {
+    s.marks.clear();
+    const { x, y } = s.centre;
+    if (m?.progress != null) {
+      // A ring around the hex fills as the build (cyan) or the removal (orange) goes on.
+      const r = DRAWN_SIZE + 6;
+      const start = -Math.PI / 2;
+      s.marks.circle(x, y, r).stroke({ width: 4, color: 0x26304a });
+      s.marks.moveTo(x, y - r).arc(x, y, r, start, start + 2 * Math.PI * m.progress.ratio)
+        .stroke({ width: 4, color: m.progress.removing ? 0xff9f43 : 0x7fd4ff });
+    }
+    const modules = m?.modules ?? 0;
+    s.badge.text = modules > 0 ? String(modules) : '';
+    if (modules > 0) {
+      s.marks.circle(s.badge.x, s.badge.y, 10).fill({ color: 0x5b6cff }).stroke({ width: 2, color: 0x0b1020 });
+    }
+    // Requests waiting for a connection pile up under the pool.
+    for (let i = 0; i < queued; i++) s.marks.rect(x - DRAWN_SIZE * 0.5 + i * 7, y + DRAWN_SIZE * 0.55, 5, 8);
+    if (queued > 0) s.marks.fill({ color: 0xffd166 });
+  }
+
+  private drawFlow(requestRate: number | undefined, errorRate: number | undefined, deltaMs: number): void {
     this.flow.clear();
     if (requestRate === undefined || requestRate <= 0) return;
     // Pipe crossings per second grow with traffic but stay readable (log scale).
     this.flowPhase = (this.flowPhase + (deltaMs / 1000) * 0.25 * Math.log10(1 + requestRate)) % 1;
+    const red = redDots(errorRate, FLOW_DOTS);
     for (const link of LINKS) {
       const a = this.centreOf(link.from);
       const b = this.centreOf(link.to);
-      for (let i = 0; i < 3; i++) {
-        const t = (this.flowPhase + i / 3) % 1;
-        this.flow.circle(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 3);
+      for (let i = 0; i < FLOW_DOTS; i++) {
+        const t = (this.flowPhase + i / FLOW_DOTS) % 1;
+        // Spread the red dots along the pipe instead of sending them as one train.
+        const failed = (i * red) % FLOW_DOTS < red;
+        this.flow.circle(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 3).fill({ color: failed ? 0xff4d4f : 0x7fd4ff });
       }
     }
-    this.flow.fill({ color: 0x7fd4ff });
   }
 
   private centreOf(id: string): Point {

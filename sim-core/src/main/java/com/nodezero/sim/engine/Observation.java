@@ -73,8 +73,11 @@ public record Observation(
     /**
      * What NODE-01 is built of right now; structural counters change it (more cores, threads, a bigger disk).
      * Lets the map show load against the real capacity instead of a constant in the client.
+     * {@code appDown} is true while the app is stopped (a restart, a rollback, a CPU swap): the player
+     * caused it, so the map may show it without monitoring (slice 8b, decision AP).
      */
-    public record Station(int cpuCores, int threads, int dbPool, double diskMb, int dbCpuCores, int dbIoDisks) {}
+    public record Station(int cpuCores, int threads, int dbPool, double diskMb, int dbCpuCores, int dbIoDisks,
+            boolean appDown) {}
 
     /** One answer option; {@code key} is its text key. */
     public record Choice(String id, String key) {}

@@ -4,6 +4,7 @@ import { Orders } from './game/orders';
 import { Review } from './game/postmortem';
 import { firingNodes } from './game/alerts';
 import { LoadHistory } from './game/history';
+import { nodeMarks } from './game/mapFeedback';
 import { nodeById } from './game/station';
 import { shieldAlert } from './game/shield';
 import { GameStore } from './game/store';
@@ -21,7 +22,7 @@ import { StationMap } from './map/stationMap';
 import { Connection } from './net/connection';
 import { Texts } from './net/i18n';
 import { SessionResource } from './net/sessionResource';
-import { parseCatalog, parseCodex, type ClientAction } from './protocol/messages';
+import { parseCatalog, parseCodex, type CatalogItem, type ClientAction } from './protocol/messages';
 
 function byId(id: string): HTMLElement {
   const e = document.getElementById(id);
@@ -36,6 +37,7 @@ const texts = new Texts();
 // One minute of load per node at the snapshot rate (5 Hz).
 const history = new LoadHistory(300);
 let moduleNames = new Map<string, string>();
+let catalogItems: CatalogItem[] = [];
 const map = new StationMap();
 await map.mount(byId('map'));
 
@@ -127,6 +129,7 @@ const catalog = new SessionResource('catalog', parseCatalog, (c) => {
   panel.setCatalog(c);
   actionPanel.setCatalog(c);
   moduleNames = new Map(c.counters.map((item) => [item.id, item.name]));
+  catalogItems = c.counters;
   hud.setCrewMax(c.crewPerShift);
 }, (e: unknown) => {
   console.error(e);
@@ -155,7 +158,9 @@ const chapter = new ChapterDialog();
 map.ticker.add((ticker) => {
   const now = performance.now();
   const view = store.sample(now);
-  map.render(view, ticker.deltaMS, firingNodes(store.current()?.alerts ?? []));
+  const raw = store.current();
+  map.render(view, ticker.deltaMS, firingNodes(raw?.alerts ?? []),
+    raw === undefined ? undefined : nodeMarks(raw, catalogItems, tickHz));
   hud.render(view, view === undefined || !orders.hasPending() ? undefined : orders.projectedCredits(view));
   panel.render(store.current());
   actionPanel.render(store.current());

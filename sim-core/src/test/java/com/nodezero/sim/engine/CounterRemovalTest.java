@@ -65,9 +65,9 @@ class CounterRemovalTest {
 
     @Test
     void theStationReportsItsCapacities() {
-        assertThat(GAME.observe(GAME.newState(1)).station()).isEqualTo(new Observation.Station(4, 200, 10, 100, 4, 1));
+        assertThat(GAME.observe(GAME.newState(1)).station()).isEqualTo(new Observation.Station(4, 200, 10, 100, 4, 1, false));
         assertThat(GAME.observe(installed("raise-max-threads", "expand-disk")).station())
-                .isEqualTo(new Observation.Station(4, 400, 10, 200, 4, 1));
+                .isEqualTo(new Observation.Station(4, 400, 10, 200, 4, 1, false));
     }
 
     @Test

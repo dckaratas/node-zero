@@ -133,3 +133,11 @@ M/M/c kuyruğunda Erlang-C de aynı üstel sönümü verir. Amaç (kademeli pay,
 - AN/AQ: hex üstünde görünmez DOM düğmeleri (AS); seçilen düğüm beyaz çerçeve. Panel başında denetçi: kapasite, USE (ölçülemiyorsa "? needs <modül>", hiç export edilmiyorsa "not exported"), son 60 sn sparkline, düğümün alarm kuralları, "Alert on <metrik>" kısayolu.
 - AO: katalogda `nodes` (efekt hedefleri; rate limit → gateway; hedefsizler her düğümde); düğüm seçilince kartlar süzülür, "Show all".
 - Düzeltme: alarm formu metrik yokken görünüyordu.
+
+## Ek (Dilim 8b, 2026-10-22): haritada geri bildirim (AP)
+- **Rozet:** düğüme etki eden kurulu modül sayısı hex'in sağ üstünde. Hedefsiz modüller (izleme) rozet almaz: her düğüme ait oldukları için yedi hex'te birden işaret bir şey söylemez.
+- **İlerleme halkası:** kurulumda camgöbeği, kaldırmada turuncu; oran katalogdaki `applyTimeS`'ten (kaldırma kurulum kadar sürer, 7c).
+- **DOWN:** snapshot `station.appDown` (sunucu, `Pipeline.appDown`: aktif bir kesinti penceresi; restart, rollback, CPU değişimi kurulum/kaldırma). Oyuncu kendisi tetiklediği için izleme olmadan da görünür. Tomcat ve CPU grileşir, "DOWN" yazar.
+- **Kuyruk:** HikariCP altında `hikaricp_connections_pending` kadar sarı blok (en fazla 8). **AP'den sapma:** Tomcat accept kuyruğu export edilmediği için çizilmedi (AQ, sis perdesi; denetçide de "not exported").
+- **Kırmızı akış:** boru başına 6 parçacık, `error_rate` oranında kırmızı (≥ %1 ise en az bir tane; Grafana gerekir), boru boyunca dağıtılmış.
+- Hesap istemcide saf fonksiyon (`game/mapFeedback.ts`, testli). `step` sıcak yolu değişmedi (`appDown` sadece gözlemde).

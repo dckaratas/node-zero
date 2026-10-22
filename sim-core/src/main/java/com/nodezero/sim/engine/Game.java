@@ -31,7 +31,7 @@ public final class Game {
         this.counters = new Counters(rules);
         this.actions = new Actions(rules);
         this.alerts = new Alerts(rules);
-        this.observer = new Observer(rules);
+        this.observer = new Observer(rules, pipeline);
     }
 
     /** NODE-01 with the shipped content. */

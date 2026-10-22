@@ -34,6 +34,7 @@
     "dbPool" : 10,
     "diskMb" : 100.0,
     "dbCpuCores" : 4,
-    "dbIoDisks" : 1
+    "dbIoDisks" : 1,
+    "appDown" : true
   }
 }

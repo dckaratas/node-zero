@@ -162,6 +162,11 @@ final class Pipeline {
         return since % DAY_SECONDS < durationS;
     }
 
+    /** True while a downtime window (an action, or a counter being built or removed) stops the app. */
+    boolean appDown(Progress progress, long tick) {
+        return modifiers(progress, tick).cpuDown;
+    }
+
     private Modifiers modifiers(Progress progress, long tick) {
         Modifiers m = new Modifiers();
         for (InstalledCounter installed : progress.counters()) {

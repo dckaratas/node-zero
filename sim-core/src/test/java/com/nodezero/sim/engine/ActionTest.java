@@ -60,6 +60,14 @@ class ActionTest {
     }
 
     @Test
+    void theStationReportsTheAppDownForTheRestartWindowOnly() {
+        GameState s = step(GAME.newState(1), new RunAction("restart-app")); // downtime 0-10 s
+        assertThat(GAME.observe(s).station().appDown()).isTrue();
+        assertThat(GAME.observe(idle(s, 9.8)).station().appDown()).isTrue();
+        assertThat(GAME.observe(idle(s, 10.1)).station().appDown()).isFalse();
+    }
+
+    @Test
     void countersWithToilUseTheSameCrewAndAFinishedWaveRestsIt() {
         GameState s = step(GAME.newState(1), new ApplyCounter("vertical-scale-cpu")); // toil 1
         assertThat(GAME.observe(s).crew()).isEqualTo(7);

@@ -30,7 +30,7 @@ export interface Link {
 }
 
 /** NODE-01 as built (StationLayout.node01); used until the first snapshot arrives. */
-export const NODE01: StationCapacity = { cpuCores: 4, threads: 200, dbPool: 10, diskMb: 100, dbCpuCores: 4, dbIoDisks: 1 };
+export const NODE01: StationCapacity = { cpuCores: 4, threads: 200, dbPool: 10, diskMb: 100, dbCpuCores: 4, dbIoDisks: 1, appDown: false };
 
 const clamp = (v: number): number => Math.min(1, Math.max(0, v));
 const percent = (v: number): string => `${Math.round(v * 100)}%`;
