@@ -26,11 +26,15 @@
   "counters" : [ {
     "id" : "prometheus",
     "option" : null,
-    "readyTick" : 51
+    "readyTick" : 51,
+    "removedTick" : -1,
+    "setting" : null
   }, {
     "id" : "grafana",
     "option" : null,
-    "readyTick" : 52
+    "readyTick" : 52,
+    "removedTick" : -1,
+    "setting" : null
   } ],
   "codex" : [ "prometheus", "use-method", "dashboards", "traffic-heatmap" ],
   "results" : [ ],

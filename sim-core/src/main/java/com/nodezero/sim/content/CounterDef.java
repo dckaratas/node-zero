@@ -7,6 +7,8 @@ import java.util.List;
 /**
  * A counter-measure as written in {@code content/counters/*.yaml}. No counter is free: every one
  * has a cost and usually a side effect (GDD §3). Effects are declarative; Slice 3 interprets them.
+ *
+ * @param removable {@code false} when undoing is impossible in reality (a disk cannot shrink); default true
  */
 public record CounterDef(
         String id,
@@ -24,7 +26,8 @@ public record CounterDef(
         List<EffectSpec> sideEffect,
         String tradeoffKey,
         String betterAlternative,
-        List<String> codex) {
+        List<String> codex,
+        Boolean removable) {
 
     public CounterDef {
         Require.id(id, "id");
@@ -50,6 +53,32 @@ public record CounterDef(
         }
         codex = Require.orEmpty(codex);
         codex.forEach(c -> Require.id(c, "codex[]"));
+        removable = removable == null || removable;
+        if (config.stream().filter(ConfigParam::drivesEffect).count() > 1) {
+            throw new IllegalArgumentException("at most one config param may drive the effect");
+        }
+        ConfigParam setting = setting(config);
+        if (setting != null && (effect.value() == null || Double.compare(effect.value(), setting.value()) != 0)) {
+            throw new IllegalArgumentException(
+                    "config " + setting.key() + " drives the effect, so its value must equal it");
+        }
+    }
+
+    /**
+     * The player-editable setting whose value is the main effect's value (slice 7c), e.g. Nginx {@code rate_rps};
+     * {@code null} if the counter has none. Other config params are shown but not simulated yet.
+     */
+    public ConfigParam setting() {
+        return setting(config);
+    }
+
+    private static ConfigParam setting(List<ConfigParam> config) {
+        for (ConfigParam p : config) {
+            if (p.drivesEffect()) {
+                return p;
+            }
+        }
+        return null;
     }
 
     public List<String> textKeys() {
@@ -66,10 +95,15 @@ public record CounterDef(
         }
     }
 
-    /** A tunable parameter; {@code playerEditable} ones show up in the module's config panel. */
-    public record ConfigParam(String key, double value, Double min, Double max, boolean playerEditable) {
+    /** A tunable parameter; {@code drivesEffect} marks the one whose value is the effect's value (slice 7c). */
+    public record ConfigParam(String key, double value, Double min, Double max, boolean playerEditable,
+            boolean drivesEffect) {
         public ConfigParam {
             Require.snake(key, "config[].key");
+            if (drivesEffect && (!playerEditable || min == null || max == null)) {
+                throw new IllegalArgumentException(
+                        "config " + key + " drives the effect: needs player_editable, min and max");
+            }
             if ((min != null && value < min) || (max != null && value > max)) {
                 throw new IllegalArgumentException("config " + key + " value must be within [min, max]");
             }

@@ -33,7 +33,12 @@ public final class CounterCatalog {
             String requiresInsight,
             List<String> grantsInsights,
             String tradeoff,
-            List<Option> options) {}
+            List<Option> options,
+            boolean removable,
+            Setting setting) {}
+
+    /** The player-editable value that drives the counter's effect (slice 7c), e.g. Nginx {@code rate_rps}. */
+    public record Setting(String key, double value, double min, double max) {}
 
     /** @param applyTimeS overrides the counter's build time, or {@code null} */
     public record Option(String id, String name, Double applyTimeS, String tradeoff) {}
@@ -100,6 +105,11 @@ public final class CounterCatalog {
         }
         return new Item(def.id(), def.name().in(language), def.realTech(), def.cost().credits(),
                 def.cost().upkeepPerWave(), def.toil(), def.applyTimeS(), def.requiresCounters(), def.requiresInsight(),
-                def.grantsInsights(), content.messages().text(language, def.tradeoffKey()), List.copyOf(options));
+                def.grantsInsights(), content.messages().text(language, def.tradeoffKey()), List.copyOf(options),
+                def.removable(), setting(def.setting()));
+    }
+
+    private static Setting setting(CounterDef.ConfigParam p) {
+        return p == null ? null : new Setting(p.key(), p.value(), p.min(), p.max());
     }
 }

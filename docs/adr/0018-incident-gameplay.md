@@ -1,6 +1,6 @@
 # ADR-0018: Olay anı oynanışı (Dilim 7)
 
-- **Durum:** Kabul edildi; 7a ve 7b uygulandı (7c kaldırma, 7d alarm sırada)
+- **Durum:** Kabul edildi; 7a, 7b ve 7c uygulandı (7d alarm sırada)
 - **Tarih:** 2026-10-22
 
 ## Bağlam
@@ -96,3 +96,19 @@ M/M/c kuyruğunda Erlang-C de aynı üstel sönümü verir. Amaç (kademeli pay,
 
 - Tasarım gereği eylemler semptomu yatıştırır, kalıcı çözüm sayaçtadır; yanlış anda kullanılan eylem kalkanı yakar.
 - Benchmark: `step` ~3,3 µs (değişmedi).
+
+## Ek (Dilim 7c, 2026-10-22): kaldırma ve ayar
+- `RemoveCounter`: kurulum süresi kadar sürer (`InstalledCounter.removedTick`), bu sürede sayaç çalışmaya devam eder ve
+  kurulumdaki geçiş bedelleri (`BUILD` efektleri: kesinti, yazma kilidi) **yeniden** uygulanır: "geri almak, yapmak kadar
+  sürer ve aynı yerden acıtır". Bitince yapısal etki geri alınır (8 → 4 çekirdek). İade yok; mürettebat bedeli kurulumla aynı.
+- Reddedilenler: kurulum sürerken, zaten kaldırılırken, başka sayaç ona dayanıyorken (Grafana varken Prometheus),
+  `removable: false` (disk büyütme: hacim küçülmez). İzleme kalkınca metrikler kaybolur, **içgörüler kalır**.
+- Bakım ücreti listedeki sayaçlardan alındığı için kaldırılan sayaç sonraki dalga sonunda ödenmez. Yeniden satın alınabilir.
+- **Ayar (AM'nin devamı):** `ConfigureCounter(id, value)`. Sadece etkiyi doğrudan süren parametre açıldı
+  (`drives_effect: true`): Nginx `rate_rps`, `statement_timeout` `timeout_ms`, bulkhead `job_pool_size`. Değer ana efektin
+  değerinin yerine geçer; min/max içinde olmalı; 1 mürettebat, hemen etkili (config reload). `keep_days`, `chunk_size`,
+  `station_hour`, `max_threads` gibi dolaylı parametreler şimdilik gösterilmiyor (simülasyonda karşılıkları yok).
+- Ölçüm: CPU büyütme + rate limit 150 ile dalga 3 ❌ (429'lar bütçeyi yakıyor); `rate_rps = 350` yapınca ✅ kalkan %100.
+- İstemci: kurulu kartta "Remove" (ikinci tıkta onay: "no refund") ve ayar alanı + "Apply (1 crew)"; kaldırılırken
+  "Removing… N s". Protokol: `remove_counter`, `configure_counter`; snapshot sayaçlarında `removedTick`, `setting`;
+  katalogda `removable`, `setting {key, value, min, max}`.

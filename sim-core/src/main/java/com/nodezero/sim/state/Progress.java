@@ -65,6 +65,12 @@ public record Progress(
                 reviewedThreats, codex, results, ops);
     }
 
+    /** Replaces the installed counters, e.g. after one was removed or reconfigured. */
+    public Progress withCounters(List<InstalledCounter> newCounters) {
+        return new Progress(credits, wave, activeThreats, newCounters, insights, postmortem, reviewedThreats, codex,
+                results, ops);
+    }
+
     public Progress withInsight(String insight) {
         if (insights.contains(insight)) {
             return this;

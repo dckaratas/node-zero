@@ -13,7 +13,9 @@
     "requiresInsight" : null,
     "grantsInsights" : [ ],
     "tradeoff" : "Lifts the fog: raw metrics for CPU, threads, pools and disk. Costs upkeep every wave.",
-    "options" : [ ]
+    "options" : [ ],
+    "removable" : true,
+    "setting" : null
   }, {
     "id" : "grafana",
     "name" : "Command Display",
@@ -26,7 +28,44 @@
     "requiresInsight" : null,
     "grantsInsights" : [ "traffic-heatmap" ],
     "tradeoff" : "Dashboards turn metrics into answers: latency, error rate, forecasts, the traffic heatmap.",
-    "options" : [ ]
+    "options" : [ ],
+    "removable" : true,
+    "setting" : null
+  }, {
+    "id" : "expand-disk",
+    "name" : "Expand cargo hold",
+    "realTech" : "Volume resize",
+    "credits" : 300,
+    "upkeepPerWave" : 20,
+    "toil" : 0,
+    "applyTimeS" : 10.0,
+    "requiresCounters" : [ ],
+    "requiresInsight" : null,
+    "grantsInsights" : [ ],
+    "tradeoff" : "Buys time, not a fix: the hold fills again, just later.",
+    "options" : [ ],
+    "removable" : false,
+    "setting" : null
+  }, {
+    "id" : "nginx-rate-limit",
+    "name" : "Nginx rate limit",
+    "realTech" : "Nginx limit_req",
+    "credits" : 100,
+    "upkeepPerWave" : 5,
+    "toil" : 0,
+    "applyTimeS" : 2.0,
+    "requiresCounters" : [ ],
+    "requiresInsight" : null,
+    "grantsInsights" : [ ],
+    "tradeoff" : "Protects the reactor by answering 429 to the excess; those users still fail.",
+    "options" : [ ],
+    "removable" : true,
+    "setting" : {
+      "key" : "rate_rps",
+      "value" : 150.0,
+      "min" : 50.0,
+      "max" : 400.0
+    }
   }, {
     "id" : "create-index",
     "name" : "Create index",
@@ -49,7 +88,9 @@
       "name" : "CREATE INDEX CONCURRENTLY",
       "applyTimeS" : 40.0,
       "tradeoff" : "No write lock, but slower and adds database I/O while it builds."
-    } ]
+    } ],
+    "removable" : true,
+    "setting" : null
   } ],
   "actions" : [ {
     "id" : "clear-disk",

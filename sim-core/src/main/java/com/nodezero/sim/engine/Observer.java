@@ -50,7 +50,8 @@ final class Observer {
         }
 
         List<Observation.Counter> counters = new ArrayList<>();
-        p.counters().forEach(c -> counters.add(new Observation.Counter(c.id(), c.option(), c.activeTick())));
+        p.counters().forEach(c -> counters.add(
+                new Observation.Counter(c.id(), c.option(), c.activeTick(), c.removedTick(), c.setting())));
         double slo = rules.balance().slo();
         double shield = wave.shield(slo);
         double burnRate = 0;

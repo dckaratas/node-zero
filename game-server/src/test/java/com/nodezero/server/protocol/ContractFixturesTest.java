@@ -121,17 +121,17 @@ class ContractFixturesTest {
         }
     }
 
-    /** A sample of the catalog body: one plain counter, one gated by a counter, one with options, one action. */
+    /** A sample of the catalog body: plain, gated by a counter, not removable, with a setting, with options; one action. */
     @Test
     void catalogMatchesTheClientFixture() throws IOException {
         CounterCatalog.Catalog full = new CounterCatalog(Game.chapterOne().rules())
                 .visible(Language.EN, List.of("pg-stat-statements"));
-        List<String> sample = List.of("prometheus", "grafana", "create-index");
+        List<String> sample = List.of("prometheus", "grafana", "expand-disk", "nginx-rate-limit", "create-index");
         CounterCatalog.Catalog body = new CounterCatalog.Catalog(full.language(), full.crewPerShift(),
                 full.counters().stream().filter(c -> sample.contains(c.id())).toList(),
                 full.actions().stream().filter(a -> a.id().equals("clear-disk")).toList());
 
-        assertThat(body.counters()).hasSize(3);
+        assertThat(body.counters()).hasSize(5);
         matchFixture("catalog", json.writeValueAsString(body));
     }
 
@@ -179,6 +179,8 @@ class ContractFixturesTest {
         expected.put("resume", new ClientMessage.Resume());
         expected.put("answer-postmortem", new ClientMessage.AnswerPostmortem("b"));
         expected.put("run-action", new ClientMessage.RunAction("clear-disk", "truncate"));
+        expected.put("remove-counter", new ClientMessage.RemoveCounter("prometheus"));
+        expected.put("configure-counter", new ClientMessage.ConfigureCounter("nginx-rate-limit", 300));
 
         for (Map.Entry<String, ClientMessage> e : expected.entrySet()) {
             Path file = FIXTURES.resolve("client").resolve(e.getKey() + ".json");

@@ -15,6 +15,8 @@ import com.nodezero.sim.engine.Command;
     @JsonSubTypes.Type(value = ClientMessage.ApplyCounter.class, name = "apply_counter"),
     @JsonSubTypes.Type(value = ClientMessage.AnswerPostmortem.class, name = "answer_postmortem"),
     @JsonSubTypes.Type(value = ClientMessage.RunAction.class, name = "run_action"),
+    @JsonSubTypes.Type(value = ClientMessage.RemoveCounter.class, name = "remove_counter"),
+    @JsonSubTypes.Type(value = ClientMessage.ConfigureCounter.class, name = "configure_counter"),
     @JsonSubTypes.Type(value = ClientMessage.Pause.class, name = "pause"),
     @JsonSubTypes.Type(value = ClientMessage.Resume.class, name = "resume")
 })
@@ -30,6 +32,12 @@ public sealed interface ClientMessage {
     /** An incident action (slice 7b), optionally one of its options. */
     record RunAction(String action, String option) implements ClientMessage {}
 
+    /** Undo an installed counter (slice 7c). */
+    record RemoveCounter(String counter) implements ClientMessage {}
+
+    /** New value for the setting that drives a counter's effect (slice 7c). */
+    record ConfigureCounter(String counter, double value) implements ClientMessage {}
+
     record Pause() implements ClientMessage {}
 
     record Resume() implements ClientMessage {}
@@ -41,6 +49,8 @@ public sealed interface ClientMessage {
             case ApplyCounter m -> new Command.ApplyCounter(m.counter(), m.option());
             case AnswerPostmortem m -> new Command.AnswerPostmortem(m.option());
             case RunAction m -> new Command.RunAction(m.action(), m.option());
+            case RemoveCounter m -> new Command.RemoveCounter(m.counter());
+            case ConfigureCounter m -> new Command.ConfigureCounter(m.counter(), m.value());
             case Pause m -> null;
             case Resume m -> null;
         };
@@ -53,6 +63,8 @@ public sealed interface ClientMessage {
             case Command.ApplyCounter c -> new ApplyCounter(c.counterId(), c.optionId());
             case Command.AnswerPostmortem c -> new AnswerPostmortem(c.optionId());
             case Command.RunAction c -> new RunAction(c.actionId(), c.optionId());
+            case Command.RemoveCounter c -> new RemoveCounter(c.counterId());
+            case Command.ConfigureCounter c -> new ConfigureCounter(c.counterId(), c.value());
             case Command.Noop c -> throw notAPlayerAction(c);
             case Command.SetArrivalRate c -> throw notAPlayerAction(c);
             case Command.SetHoldTime c -> throw notAPlayerAction(c);

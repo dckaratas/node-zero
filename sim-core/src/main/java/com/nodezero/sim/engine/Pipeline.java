@@ -22,6 +22,7 @@ import com.nodezero.sim.state.Progress;
 import com.nodezero.sim.state.ResourceId;
 import com.nodezero.sim.state.WaveState;
 import java.util.EnumMap;
+import java.util.List;
 
 /**
  * Request path of NODE-01: [Nginx] → Tomcat threads → CPU → HikariCP → DB CPU / DB I/O, plus logs to disk.
@@ -165,14 +166,19 @@ final class Pipeline {
         Modifiers m = new Modifiers();
         for (InstalledCounter installed : progress.counters()) {
             boolean active = installed.isActive(tick);
-            for (Rules.Effect e : rules.counter(installed.id()).variant(installed.option()).effects()) {
+            boolean transition = installed.inTransition(tick);
+            List<Rules.Effect> effects = rules.counter(installed.id()).variant(installed.option()).effects();
+            for (int i = 0; i < effects.size(); i++) {
+                Rules.Effect e = effects.get(i);
                 boolean applies = switch (e.kind().timing) {
                     case ACTIVE -> active;
-                    case BUILD -> !active;
+                    case BUILD -> transition; // building or being removed (slice 7c)
                     case STRUCTURAL, INSTANT, NARRATIVE -> false;
                 };
                 if (applies) {
-                    m.apply(e);
+                    // The player's setting replaces the main effect's value (slice 7c), e.g. Nginx rate_rps.
+                    boolean set = i == 0 && installed.setting() != null;
+                    m.apply(e, set ? installed.setting() : e.value());
                 }
             }
         }
@@ -247,20 +253,24 @@ final class Pipeline {
         boolean jobPaused;
 
         void apply(Rules.Effect e) {
+            apply(e, e.value());
+        }
+
+        void apply(Rules.Effect e, double value) {
             switch (e.kind()) {
-                case SET_UNITS_PER_REQUEST -> logUnits = e.value();
-                case ADD_DRAIN -> drainPerSecond += e.value();
-                case RATE_LIMIT -> rateLimitRps = Math.min(rateLimitRps, e.value());
-                case CAP_HOLD_TIME -> holdCapMs = Math.min(holdCapMs, e.value());
-                case SET_PER_ROW_MS -> perRowMs = e.value();
+                case SET_UNITS_PER_REQUEST -> logUnits = value;
+                case ADD_DRAIN -> drainPerSecond += value;
+                case RATE_LIMIT -> rateLimitRps = Math.min(rateLimitRps, value);
+                case CAP_HOLD_TIME -> holdCapMs = Math.min(holdCapMs, value);
+                case SET_PER_ROW_MS -> perRowMs = value;
                 case RESCHEDULE -> jobRescheduled = true;
-                case THROTTLE_JOB -> jobThrottle *= e.value();
-                case ISOLATE_SLOTS -> isolatedSlots = (int) e.value();
-                case LOAD_MULTIPLIER -> retryMultiplier *= e.value();
+                case THROTTLE_JOB -> jobThrottle *= value;
+                case ISOLATE_SLOTS -> isolatedSlots = (int) value;
+                case LOAD_MULTIPLIER -> retryMultiplier *= value;
                 case DOWNTIME -> cpuDown = true;
                 case WRITE_LOCK -> writeLocked = true;
-                case EXTRA_LOAD -> ioLoadFactor *= 1 + e.value();
-                case COLD_START -> cpuSlowdown *= e.value();
+                case EXTRA_LOAD -> ioLoadFactor *= 1 + value;
+                case COLD_START -> cpuSlowdown *= value;
                 case PAUSE_JOB -> jobPaused = true;
                 case ADD_SERVERS, ADD_SLOTS, SCALE_CAPACITY, ENABLE_PROMETHEUS, ENABLE_POSTGRES_EXPORTER, ENABLE_GRAFANA,
                         RETRY_FAILED, REJECT_WITH_STATUS, LESS_DEBUG_CONTEXT,

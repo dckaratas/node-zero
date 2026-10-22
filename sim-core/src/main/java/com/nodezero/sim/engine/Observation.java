@@ -73,8 +73,10 @@ public record Observation(
      * being built (the client shows progress as {@code (readyTick - tick) * DT} seconds left).
      *
      * @param option chosen option id, or {@code null}
+     * @param removedTick tick its removal completes, or -1 (slice 7c)
+     * @param setting the value of its driving setting when the player changed it, otherwise {@code null}
      */
-    public record Counter(String id, String option, long readyTick) {
+    public record Counter(String id, String option, long readyTick, long removedTick, Double setting) {
 
         public boolean isReady(long tick) {
             return tick >= readyTick;

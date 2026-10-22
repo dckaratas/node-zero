@@ -47,7 +47,7 @@ class ObservationTest {
         Observation ready = game.observe(run(s, 60, List.of()));
 
         assertThat(building.counters()).singleElement()
-                .isEqualTo(new Observation.Counter("prometheus", null, 51));
+                .isEqualTo(new Observation.Counter("prometheus", null, 51, -1, null));
         assertThat(building.counters().getFirst().isReady(building.tick())).isFalse();
         assertThat(building.metrics()).isEmpty();
         assertThat(ready.counters().getFirst().isReady(ready.tick())).isTrue();

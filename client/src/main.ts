@@ -105,7 +105,7 @@ const panel = new CounterPanel(hud.countersHost, orders, (item, option) => {
   const action: ClientAction = { type: 'apply_counter', counter: item.id };
   if (option !== undefined) action.option = option;
   if (send(action)) orders.place(item);
-}, () => tickHz);
+}, () => tickHz, send);
 const actionPanel = new ActionPanel(hud.actionsHost, (action, option) => {
   const message: ClientAction = { type: 'run_action', action };
   if (option !== undefined) message.option = option;

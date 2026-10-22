@@ -9,6 +9,8 @@ export type ClientAction =
   | { type: 'apply_counter'; counter: string; option?: string }
   | { type: 'answer_postmortem'; option: string }
   | { type: 'run_action'; action: string; option?: string }
+  | { type: 'remove_counter'; counter: string }
+  | { type: 'configure_counter'; counter: string; value: number }
   | { type: 'pause' }
   | { type: 'resume' };
 
@@ -94,6 +96,10 @@ export interface InstalledCounter {
   id: string;
   option: string | null;
   readyTick: number;
+  /** Tick its removal completes, or -1. */
+  removedTick: number;
+  /** The player's value for its setting, or null for the default. */
+  setting: number | null;
 }
 
 /** GET /api/sessions/{id}/catalog: counters this session may see (insight-gated ones only once unlocked). */
@@ -142,6 +148,17 @@ export interface CatalogItem {
   grantsInsights: string[];
   tradeoff: string;
   options: CatalogOption[];
+  /** False when undoing is impossible (a disk cannot shrink). */
+  removable: boolean;
+  /** The player-editable value that drives the effect, e.g. Nginx rate_rps. */
+  setting: CatalogSetting | null;
+}
+
+export interface CatalogSetting {
+  key: string;
+  value: number;
+  min: number;
+  max: number;
 }
 
 export interface CatalogOption {
@@ -221,9 +238,10 @@ function list<T>(v: unknown, path: string, parse: (v: unknown, path: string) => 
 
 function installed(v: unknown, path: string): InstalledCounter {
   const o = object(v, path);
-  keys(o, path, ['id', 'option', 'readyTick']);
+  keys(o, path, ['id', 'option', 'readyTick', 'removedTick', 'setting']);
   return { id: str(o['id'], `${path}.id`), option: nullable(o['option'], `${path}.option`, str),
-    readyTick: num(o['readyTick'], `${path}.readyTick`) };
+    readyTick: num(o['readyTick'], `${path}.readyTick`), removedTick: num(o['removedTick'], `${path}.removedTick`),
+    setting: nullable(o['setting'], `${path}.setting`, num) };
 }
 
 function choice(v: unknown, path: string): { id: string; key: string } {
@@ -283,7 +301,7 @@ function catalogOption(v: unknown, path: string): CatalogOption {
 function catalogItem(v: unknown, path: string): CatalogItem {
   const o = object(v, path);
   keys(o, path, ['id', 'name', 'realTech', 'credits', 'upkeepPerWave', 'toil', 'applyTimeS', 'requiresCounters',
-    'requiresInsight', 'grantsInsights', 'tradeoff', 'options']);
+    'requiresInsight', 'grantsInsights', 'tradeoff', 'options', 'removable', 'setting']);
   return {
     id: str(o['id'], `${path}.id`),
     name: str(o['name'], `${path}.name`),
@@ -297,7 +315,16 @@ function catalogItem(v: unknown, path: string): CatalogItem {
     grantsInsights: strings(o['grantsInsights'], `${path}.grantsInsights`),
     tradeoff: str(o['tradeoff'], `${path}.tradeoff`),
     options: list(o['options'], `${path}.options`, catalogOption),
+    removable: bool(o['removable'], `${path}.removable`),
+    setting: nullable(o['setting'], `${path}.setting`, catalogSetting),
   };
+}
+
+function catalogSetting(v: unknown, path: string): CatalogSetting {
+  const o = object(v, path);
+  keys(o, path, ['key', 'value', 'min', 'max']);
+  return { key: str(o['key'], `${path}.key`), value: num(o['value'], `${path}.value`),
+    min: num(o['min'], `${path}.min`), max: num(o['max'], `${path}.max`) };
 }
 
 function catalogAction(v: unknown, path: string): CatalogAction {
@@ -369,6 +396,13 @@ export function parseAction(v: unknown, path = 'action'): ClientAction {
     case 'answer_postmortem':
       keys(o, path, ['type', 'option']);
       return { type: 'answer_postmortem', option: str(o['option'], `${path}.option`) };
+    case 'remove_counter':
+      keys(o, path, ['type', 'counter']);
+      return { type: 'remove_counter', counter: str(o['counter'], `${path}.counter`) };
+    case 'configure_counter':
+      keys(o, path, ['type', 'counter', 'value']);
+      return { type: 'configure_counter', counter: str(o['counter'], `${path}.counter`),
+        value: num(o['value'], `${path}.value`) };
     case 'run_action': {
       keys(o, path, ['type', 'action'], ['option']);
       const action: ClientAction = { type: 'run_action', action: str(o['action'], `${path}.action`) };

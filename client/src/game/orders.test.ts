@@ -6,7 +6,7 @@ import type { View } from './store';
 function item(id: string, credits: number, requiresCounters: string[] = []): CatalogItem {
   return {
     id, name: id, realTech: id, credits, upkeepPerWave: 0, toil: 0, applyTimeS: 5, requiresCounters,
-    requiresInsight: null, grantsInsights: [], tradeoff: '', options: [],
+    requiresInsight: null, grantsInsights: [], tradeoff: '', options: [], removable: true, setting: null,
   };
 }
 
@@ -26,7 +26,7 @@ describe('Orders', () => {
     expect(orders.projectedCredits(view(1000))).toBe(800);
     expect(cardState(prometheus, view(1000), orders, 10)).toEqual({ kind: 'queued' });
 
-    const confirmed = view(800, [{ id: 'prometheus', option: null, readyTick: 150 }]);
+    const confirmed = view(800, [{ id: 'prometheus', option: null, readyTick: 150, removedTick: -1, setting: null }]);
     orders.confirm(confirmed.counters);
     expect(orders.projectedCredits(confirmed)).toBe(800);
     expect(cardState(prometheus, confirmed, orders, 10)).toEqual({ kind: 'building', secondsLeft: 5 });
@@ -55,12 +55,14 @@ describe('cardState', () => {
   it('locks a counter until the counters it builds on are bought', () => {
     const orders = new Orders();
     expect(cardState(grafana, view(1000), orders, 10)).toEqual({ kind: 'locked', needs: ['prometheus'] });
-    const owned = view(800, [{ id: 'prometheus', option: null, readyTick: 150 }]);
+    const owned = view(800, [{ id: 'prometheus', option: null, readyTick: 150, removedTick: -1, setting: null }]);
     expect(cardState(grafana, owned, orders, 10)).toEqual({ kind: 'available' });
   });
 
-  it('shows a finished build as installed', () => {
-    const done = view(800, [{ id: 'prometheus', option: null, readyTick: 50 }]);
-    expect(cardState(prometheus, done, new Orders(), 10)).toEqual({ kind: 'installed' });
+  it('shows a finished build as installed, then as removing', () => {
+    const done = view(800, [{ id: 'prometheus', option: null, readyTick: 50, removedTick: -1, setting: null }]);
+    expect(cardState(prometheus, done, new Orders(), 10)).toEqual({ kind: 'installed', setting: null });
+    const removing = view(800, [{ id: 'prometheus', option: null, readyTick: 50, removedTick: 130, setting: null }]);
+    expect(cardState(prometheus, removing, new Orders(), 10)).toEqual({ kind: 'removing', secondsLeft: 3 });
   });
 });

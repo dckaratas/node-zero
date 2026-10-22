@@ -74,6 +74,7 @@ counters:
     tradeoff_key: tradeoff.expand_disk
     better_alternative: log-level-info
     codex: [fill-model]
+    removable: false   # a volume can grow online but not shrink
 
   # --- traffic-surge ---
   - id: vertical-scale-cpu
@@ -95,7 +96,7 @@ counters:
     toil: 0
     apply_time_s: 2
     config:
-      - { key: rate_rps, value: 150, min: 50, max: 400, player_editable: true }
+      - { key: rate_rps, value: 150, min: 50, max: 400, player_editable: true, drives_effect: true }
     effect: { type: rate_limit, target: cpu, value: 150 }
     side_effect:
       - { type: reject_with_status, value: 429 }
@@ -110,7 +111,7 @@ counters:
     toil: 0
     apply_time_s: 1
     config:
-      - { key: timeout_ms, value: 2000, min: 100, max: 30000, player_editable: true }
+      - { key: timeout_ms, value: 2000, min: 100, max: 30000, player_editable: true, drives_effect: true }
     effect: { type: cap_hold_time, target: db_pool, value: 2000 }
     side_effect:
       - { type: failed_queries, target: db_pool }
@@ -193,7 +194,7 @@ counters:
     toil: 0
     apply_time_s: 5
     config:
-      - { key: job_pool_size, value: 2, min: 1, max: 5, player_editable: true }
+      - { key: job_pool_size, value: 2, min: 1, max: 5, player_editable: true, drives_effect: true }
     effect: { type: isolate_slots, target: db_pool, value: 2 }
     side_effect:
       - { type: job_runs_longer }

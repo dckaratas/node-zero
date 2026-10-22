@@ -53,5 +53,5 @@ NODE-01: 4 çekirdek × μ=50 rps (S=20 ms), Tomcat maxThreads=200 / acceptCount
 ## Yol haritası
 0 repo ✅ · 1 sim-core (1a utilization+engine ✅, 1b occupancy ✅, 1c fill ✅) · 2 YAML içerik ✅ · 3a istek hattı + dalga trafiği ✅ ·
 3b hata bütçesi + karşı aksiyonlar ✅ · 3c sis perdesi ✅ · 4 Spring Boot + WebSocket ✅ (4b gönderim azaltma ✅) · 5 TS/PixiJS istemci ✅ (5a harita + HUD, 5b sayaç paneli) ·
-6 postmortem/kodeks/i18n ✅ (6a postmortem, 6b kodeks, 6c dil seçici) · 7 olay anı oynanışı (7a kalkan + bölüm sonu ✅, 7b müdahale + mürettebat ✅, 7c kaldırma, 7d alarm) ·
+6 postmortem/kodeks/i18n ✅ (6a postmortem, 6b kodeks, 6c dil seçici) · 7 olay anı oynanışı (7a kalkan + bölüm sonu ✅, 7b müdahale + mürettebat ✅, 7c kaldırma + ayar ✅, 7d alarm) ·
 8 harita etkileşimi · son: canlıya alma + oyunun kendini izlemesi (kullanıcı söyleyince).

@@ -49,6 +49,22 @@ public sealed interface Command {
         }
     }
 
+    /** Game: undoes an installed counter (slice 7c); takes as long as building it did. */
+    record RemoveCounter(String counterId) implements Command {
+
+        public RemoveCounter {
+            Objects.requireNonNull(counterId, "counterId");
+        }
+    }
+
+    /** Game: changes the setting that drives an installed counter's effect, e.g. Nginx {@code rate_rps} (slice 7c). */
+    record ConfigureCounter(String counterId, double value) implements Command {
+
+        public ConfigureCounter {
+            Objects.requireNonNull(counterId, "counterId");
+        }
+    }
+
     /** Game: the on-call crew runs an incident action (slice 7b), optionally one of its options. */
     record RunAction(String actionId, String optionId) implements Command {
 

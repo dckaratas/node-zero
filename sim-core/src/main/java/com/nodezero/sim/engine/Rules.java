@@ -287,6 +287,7 @@ public final class Rules {
     /** A counter with its effects resolved per option ({@code ""} when it has no options). */
     record CounterRules(CounterDef def, Map<String, Variant> variants) {
 
+        /** {@code effects} starts with the main effect, then the side effects (a setting replaces the first value). */
         record Variant(double applyTimeS, List<Effect> effects) {}
 
         Variant variant(String option) {

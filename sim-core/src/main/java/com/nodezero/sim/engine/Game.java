@@ -62,6 +62,8 @@ public final class Game {
                 case Command.ApplyCounter apply -> s = counters.apply(s, apply, tick);
                 case Command.AnswerPostmortem answer -> s = waves.answer(s, answer.optionId());
                 case Command.RunAction run -> s = actions.run(s, run, tick);
+                case Command.RemoveCounter remove -> s = counters.remove(s, remove, tick);
+                case Command.ConfigureCounter configure -> s = counters.configure(s, configure, tick);
                 case Command.UnlockInsight unlock -> s = s.withProgress(s.progress().withInsight(unlock.insightId()));
                 case Command.Noop noop -> { }
                 case Command.SetArrivalRate c -> resourceCommands = append(resourceCommands, c);

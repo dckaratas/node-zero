@@ -40,8 +40,11 @@ describe('server → client contract', () => {
 
   it('parses the catalog sample strictly', () => {
     const catalog = parseCatalog(fixture('catalog'));
-    expect(catalog.counters.map((c) => c.id)).toEqual(['prometheus', 'grafana', 'create-index']);
-    expect(catalog.counters[2]?.options.map((o) => o.id)).toEqual(['blocking', 'concurrently']);
+    expect(catalog.counters.map((c) => c.id))
+      .toEqual(['prometheus', 'grafana', 'expand-disk', 'nginx-rate-limit', 'create-index']);
+    expect(catalog.counters[4]?.options.map((o) => o.id)).toEqual(['blocking', 'concurrently']);
+    expect(catalog.counters[2]?.removable).toBe(false);
+    expect(catalog.counters[3]?.setting).toEqual({ key: 'rate_rps', value: 150, min: 50, max: 400 });
     expect(catalog.counters[0]?.requiresInsight).toBeNull();
   });
 
@@ -103,6 +106,8 @@ describe('client → server contract', () => {
     'apply-counter': { type: 'apply_counter', counter: 'create-index', option: 'concurrently' },
     'answer-postmortem': { type: 'answer_postmortem', option: 'b' },
     'run-action': { type: 'run_action', action: 'clear-disk', option: 'truncate' },
+    'remove-counter': { type: 'remove_counter', counter: 'prometheus' },
+    'configure-counter': { type: 'configure_counter', counter: 'nginx-rate-limit', value: 300 },
     pause: { type: 'pause' },
     resume: { type: 'resume' },
   };

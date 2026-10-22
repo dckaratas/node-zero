@@ -210,3 +210,11 @@ dialog.chapter ul { padding-left: 0; list-style: none; color: var(--muted); }
 .card.action .ways { display: flex; flex-wrap: wrap; gap: 6px; }
 .card.action .ways button { font-family: ui-monospace, monospace; font-size: 0.8rem; }
 .card.action[data-state='running'] { border-color: var(--warn); }
+
+/* Counter removal and settings (slice 7c) */
+.card .setting { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.card .setting[hidden] { display: none; }
+.card .setting input { width: 6em; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; }
+.card button.remove { margin-left: 6px; background: transparent; border-color: var(--line); color: var(--muted); }
+.card button.remove[data-armed] { border-color: var(--bad); color: var(--bad); }
+.card[data-state='removing'] { opacity: 0.7; }

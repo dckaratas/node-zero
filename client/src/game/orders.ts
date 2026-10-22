@@ -62,7 +62,8 @@ export class Orders {
 }
 
 export type CardState =
-  | { kind: 'installed' }
+  | { kind: 'installed'; setting: number | null }
+  | { kind: 'removing'; secondsLeft: number }
   | { kind: 'building'; secondsLeft: number }
   | { kind: 'queued' }
   | { kind: 'locked'; needs: string[] }
@@ -74,9 +75,13 @@ export type CardState =
 export function cardState(item: CatalogItem, view: View, orders: Orders, tickHz: number): CardState {
   const installed = view.counters.find((c) => c.id === item.id);
   if (installed !== undefined) {
-    return installed.readyTick > view.tick
-      ? { kind: 'building', secondsLeft: (installed.readyTick - view.tick) / tickHz }
-      : { kind: 'installed' };
+    if (installed.readyTick > view.tick) {
+      return { kind: 'building', secondsLeft: (installed.readyTick - view.tick) / tickHz };
+    }
+    if (installed.removedTick >= 0) {
+      return { kind: 'removing', secondsLeft: Math.max(0, installed.removedTick - view.tick) / tickHz };
+    }
+    return { kind: 'installed', setting: installed.setting ?? item.setting?.value ?? null };
   }
   if (orders.isPending(item.id)) return { kind: 'queued' };
   const owned = new Set(view.counters.map((c) => c.id));

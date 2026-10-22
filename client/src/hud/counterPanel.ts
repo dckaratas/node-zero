@@ -1,6 +1,6 @@
 import { cardState, type CardState, type Orders } from '../game/orders';
 import type { View } from '../game/store';
-import type { Catalog, CatalogItem } from '../protocol/messages';
+import type { Catalog, CatalogItem, ClientAction } from '../protocol/messages';
 
 interface Card {
   item: CatalogItem;
@@ -8,6 +8,9 @@ interface Card {
   status: HTMLElement;
   button: HTMLButtonElement;
   option: () => string | undefined;
+  remove: HTMLButtonElement;
+  setting: HTMLInputElement | null;
+  settingRow: HTMLElement | null;
   /** Last rendered state, so a frame only touches the DOM when something changed. */
   key: string;
 }
@@ -15,7 +18,8 @@ interface Card {
 /**
  * Counter cards (slice 5b). Counters gated by an insight are not in the catalog until the player has
  * it (decision W, filtered on the server); when one appears after the first load it is marked as
- * newly discovered. Buying is optimistic (decision Y, see {@link Orders}).
+ * newly discovered. Buying is optimistic (decision Y, see {@link Orders}). An installed counter can be
+ * removed (two clicks: there is no refund) and its driving setting changed (slice 7c).
  */
 export class CounterPanel {
   private readonly list = document.createElement('div');
@@ -24,7 +28,7 @@ export class CounterPanel {
   private names = new Map<string, string>();
 
   constructor(host: HTMLElement, private readonly orders: Orders, private readonly buy: (item: CatalogItem, option?: string) => void,
-    private readonly tickHz: () => number) {
+    private readonly tickHz: () => number, private readonly send: (action: ClientAction) => boolean) {
     this.list.className = 'cards';
     host.append(this.list);
   }
@@ -50,13 +54,24 @@ export class CounterPanel {
     for (const card of this.cards) {
       const state = cardState(card.item, view, this.orders, this.tickHz());
       const rejection = this.orders.rejection(card.item.id);
-      const key = `${state.kind}|${state.kind === 'building' ? Math.ceil(state.secondsLeft) : ''}|${rejection ?? ''}`;
+      const detail = state.kind === 'building' || state.kind === 'removing' ? Math.ceil(state.secondsLeft)
+        : state.kind === 'installed' ? state.setting : '';
+      const key = `${state.kind}|${detail ?? ''}|${rejection ?? ''}`;
       if (key === card.key) continue;
       card.key = key;
       card.root.dataset['state'] = state.kind;
       card.status.textContent = rejection !== undefined && state.kind !== 'queued' ? `Rejected: ${rejection}` : this.describe(state);
       card.button.disabled = state.kind !== 'available';
-      card.button.hidden = state.kind === 'installed' || state.kind === 'building';
+      card.button.hidden = state.kind === 'installed' || state.kind === 'building' || state.kind === 'removing';
+      card.remove.hidden = state.kind !== 'installed' || !card.item.removable;
+      card.remove.textContent = 'Remove';
+      delete card.remove.dataset['armed'];
+      if (card.settingRow !== null && card.setting !== null) {
+        card.settingRow.hidden = state.kind !== 'installed';
+        if (state.kind === 'installed' && state.setting !== null && document.activeElement !== card.setting) {
+          card.setting.value = String(state.setting);
+        }
+      }
     }
   }
 
@@ -64,6 +79,7 @@ export class CounterPanel {
     switch (state.kind) {
       case 'installed': return 'Online';
       case 'building': return `Building… ${Math.ceil(state.secondsLeft)} s`;
+      case 'removing': return `Removing… ${Math.ceil(state.secondsLeft)} s`;
       case 'queued': return 'Queued: waiting for the station';
       case 'locked': return `Needs ${state.needs.map((id) => this.names.get(id) ?? id).join(', ')}`;
       case 'unaffordable': return 'Not enough credits';
@@ -118,8 +134,49 @@ export class CounterPanel {
     button.type = 'button';
     button.textContent = `Install (${item.credits} cr)`;
     button.onclick = () => this.buy(item, option());
-    root.append(status, button);
-    return { item, root, status, button, option, key: '' };
+
+    // Removing has no refund and takes as long as building: ask once more before sending.
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'remove';
+    remove.hidden = true;
+    remove.textContent = 'Remove';
+    remove.onclick = () => {
+      if (remove.dataset['armed'] === undefined) {
+        remove.dataset['armed'] = 'true';
+        remove.textContent = 'Confirm remove (no refund)';
+        return;
+      }
+      this.send({ type: 'remove_counter', counter: item.id });
+    };
+
+    let setting: HTMLInputElement | null = null;
+    let settingRow: HTMLElement | null = null;
+    if (item.setting !== null) {
+      const s = item.setting;
+      settingRow = document.createElement('div');
+      settingRow.className = 'setting';
+      settingRow.hidden = true;
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = String(s.min);
+      input.max = String(s.max);
+      input.value = String(s.value);
+      label.append(`${s.key} `, input);
+      const apply = document.createElement('button');
+      apply.type = 'button';
+      apply.textContent = 'Apply (1 crew)';
+      apply.onclick = () => {
+        const value = Number(input.value);
+        if (Number.isFinite(value)) this.send({ type: 'configure_counter', counter: item.id, value });
+      };
+      settingRow.append(label, apply);
+      setting = input;
+    }
+
+    root.append(status, button, ...(settingRow === null ? [] : [settingRow]), remove);
+    return { item, root, status, button, option, remove, setting, settingRow, key: '' };
   }
 }
 
