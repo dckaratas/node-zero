@@ -22,6 +22,9 @@ import java.util.List;
  */
 final class Waves {
 
+    /** Slow-request shares below one in a million are treated as none (decision AL). */
+    static final double NEGLIGIBLE_SHARE = 1e-6;
+
     private final Rules rules;
 
     Waves(Rules rules) {
@@ -45,16 +48,16 @@ final class Waves {
         GameBalance balance = rules.balance();
         ThreatDef threat = rules.threatForWave(number);
         double duration = threat == null ? balance.quietWaveSeconds() : TrafficShape.durationS(threat.traffic());
-        double expected = threat == null
-                ? rules.station().baselineRps() * duration
-                : TrafficShape.totalRequests(threat.traffic());
+        // Every wave gets the budget of one station day (decision AK), whatever traffic it brings.
+        double windowRequests = rules.station().baselineRps() * balance.budgetWindowS();
 
         List<ActiveThreat> active = p.activeThreats();
         if (threat != null && !p.isThreatActive(threat.id())) {
             active = new ArrayList<>(active);
             active.add(new ActiveThreat(threat.id(), tick));
         }
-        return s.withProgress(p.withWave(WaveState.running(number, tick, duration, expected)).withActiveThreats(active));
+        return s.withProgress(p.withWave(WaveState.running(number, tick, duration, windowRequests))
+                .withActiveThreats(active));
     }
 
     /** Books this tick's requests and failures; ends the wave on an empty shield or when its time is up. */
@@ -74,9 +77,7 @@ final class Waves {
             failedRps += plan.servedRps() * plan.writeFraction(); // writes fail on a full disk
         }
         double latencyMs = occupancy(s, ResourceId.THREADS).waitMs() + plan.threadHoldMs();
-        if (latencyMs > balance.latencySloMs()) {
-            failedRps += plan.servedRps(); // served, but too slow to count
-        }
+        failedRps += plan.servedRps() * slowShare(latencyMs, balance.latencySloMs()); // served, but too slow
         failedRps = Math.min(failedRps, plan.arrivalsRps());
 
         WaveState booked = wave.record(
@@ -146,6 +147,23 @@ final class Waves {
             return ended;
         }
         return ended.withPostmortem(new PostmortemState(threat.id(), ended.wave().number(), null));
+    }
+
+    /**
+     * Share of requests slower than the latency SLO (decision AL), assuming exponentially distributed latency
+     * with the pipeline's mean: P(L > slo) = e^(-slo / mean). The pipeline only knows mean waits of three
+     * chained queues, not their distributions, so this is the same tail approximation as the p99 panel
+     * (ADR-0013); for a single busy M/M/c queue Erlang C gives the same exponential decay. The share grows
+     * smoothly: ~0 at a 25 ms mean (e^-20), a third when the mean reaches the SLO, nearly all under a growing backlog.
+     */
+    static double slowShare(double meanLatencyMs, double sloMs) {
+        if (meanLatencyMs <= 0) {
+            return 0;
+        }
+        double share = StrictMath.exp(-sloMs / meanLatencyMs);
+        // The fluid model would otherwise book millionths of a request on a healthy station, which would
+        // count as a symptom and keep the shield a hair below full.
+        return share < NEGLIGIBLE_SHARE ? 0 : share;
     }
 
     private static OccupancyState occupancy(GameState s, ResourceId id) {

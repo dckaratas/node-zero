@@ -55,8 +55,8 @@ Hazırlık ──► Dalga ──► Postmortem ──► Araştırma ──┐
 ### Dalga, kalkan ve kredi (Dilim 3b)
 | Kural | Değer |
 |---|---|
-| Kalkan (hata bütçesi) | Dalga başına: beklenen isteklerin %1'i (SLO %99). Kalkan = harcanmamış bütçe oranı |
-| Başarısız istek | Ret (Tomcat, Hikari, CPU kuyruğu) + 429 + kesinti + statement timeout + yazma kilidi + dolu diskte yazma + **gecikmesi > 500 ms olan istekler** |
+| Kalkan (hata bütçesi) | Her dalga bir **istasyon gününün** bütçesiyle başlar: %1 × 100 rps × 1440 sn = 1440 istek (SLO %99). Taban yükte tam kesinti ~14 sn dayanır. Kalkan = harcanmamış bütçe oranı (ADR-0018 AK) |
+| Başarısız istek | Ret (Tomcat, Hikari, CPU kuyruğu) + 429 + kesinti + statement timeout + yazma kilidi + dolu diskte yazma + **500 ms'den yavaş isteklerin payı**: ortalama gecikmeye göre üstel kuyruk, `e^(−500/ortalama)` (ADR-0018 AL) |
 | Dalga sonu | Trafik şekli bitince `COMPLETE`; kalkan sıfırlanırsa `FAILED` (ödül yok, tam ekran bildirim). Kalkanın yanında yakma hızı ve kalan süre (ADR-0018) |
 | Bölüm sonu (Dilim 7a) | Son dalga kazanılıp postmortemi cevaplanınca özet + 1–3 yıldız (bitirmek, ortalama kalkan ≥ %50, tüm kök nedenler doğru). Game over yok |
 | Ödül | `round(300 × kalan kalkan) − kurulu karşı aksiyonların upkeep toplamı` |

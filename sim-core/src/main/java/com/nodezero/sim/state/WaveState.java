@@ -6,7 +6,8 @@ package com.nodezero.sim.state;
  * @param number current wave; matches {@code trigger.wave} of the threat it brings
  * @param startTick tick at which the wave started; time into the wave is {@code (tick - startTick) * DT}
  * @param durationS length of the wave's traffic shape
- * @param expectedRequests requests the wave is expected to bring; the budget is (1 - SLO) of this
+ * @param windowRequests requests of the SLO window the budget is taken from; the budget is (1 - SLO) of this
+ *     (decision AK: a station day at baseline traffic, so a wave cannot burn more than it is given)
  * @param requests requests that arrived so far
  * @param failedRequests requests that failed or breached the latency SLO so far
  * @param lastFailedRps failure rate of the previous tick (retries react to it)
@@ -17,7 +18,7 @@ public record WaveState(
         long startTick,
         Phase phase,
         double durationS,
-        double expectedRequests,
+        double windowRequests,
         double requests,
         double failedRequests,
         double lastFailedRps,
@@ -41,24 +42,24 @@ public record WaveState(
         }
     }
 
-    public static WaveState running(int number, long startTick, double durationS, double expectedRequests) {
-        return new WaveState(number, startTick, Phase.RUNNING, durationS, expectedRequests, 0, 0, 0, -1);
+    public static WaveState running(int number, long startTick, double durationS, double windowRequests) {
+        return new WaveState(number, startTick, Phase.RUNNING, durationS, windowRequests, 0, 0, 0, -1);
     }
 
     /** Shield energy in [0, 1]: the share of the error budget still unspent. */
     public double shield(double slo) {
-        double allowance = (1 - slo) * expectedRequests;
+        double allowance = (1 - slo) * windowRequests;
         return allowance <= 0 ? 1 : Math.clamp(1 - failedRequests / allowance, 0, 1);
     }
 
     public WaveState record(double arrived, double failed, double failedRps, long tick) {
         long since = failedRps <= 0 ? -1 : (symptomSinceTick < 0 ? tick : symptomSinceTick);
-        return new WaveState(number, startTick, phase, durationS, expectedRequests,
+        return new WaveState(number, startTick, phase, durationS, windowRequests,
                 requests + arrived, failedRequests + failed, failedRps, since);
     }
 
     public WaveState in(Phase newPhase) {
-        return new WaveState(number, startTick, newPhase, durationS, expectedRequests,
+        return new WaveState(number, startTick, newPhase, durationS, windowRequests,
                 requests, failedRequests, 0, -1);
     }
 }

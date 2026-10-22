@@ -56,10 +56,11 @@ final class Observer {
         double burnRate = 0;
         double emptyInS = -1;
         if (wave.phase() == WaveState.Phase.RUNNING && wave.lastFailedRps() > 0) {
-            // The budget lasts the whole wave at allowance / duration failures per second (burn rate 1).
-            double allowance = (1 - slo) * wave.expectedRequests();
-            if (allowance > 0 && wave.durationS() > 0) {
-                burnRate = wave.lastFailedRps() / (allowance / wave.durationS());
+            // The budget lasts the whole SLO window at allowance / window failures per second (burn rate 1).
+            double allowance = (1 - slo) * wave.windowRequests();
+            double windowS = rules.balance().budgetWindowS();
+            if (allowance > 0 && windowS > 0) {
+                burnRate = wave.lastFailedRps() / (allowance / windowS);
                 emptyInS = shield * allowance / wave.lastFailedRps();
             }
         }

@@ -2,6 +2,7 @@ package com.nodezero.sim.engine;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 import com.nodezero.sim.engine.Command.AnswerPostmortem;
 import com.nodezero.sim.engine.Command.StartWave;
@@ -52,7 +53,22 @@ class ChapterTest {
 
         assertThat(burning).as("an unprepared surge burns faster than the budget lasts").isNotNull();
         assertThat(burning.shieldEmptyInS()).isPositive();
-        assertThat(burning.shieldEmptyInS()).isLessThan(s.wave().durationS());
+        assertThat(burning.shieldEmptyInS()).isLessThan(GameBalance.DEFAULT.budgetWindowS());
+    }
+
+    @Test
+    void slowRequestsFailInProportionInsteadOfAllAtOnce() {
+        assertThat(Waves.slowShare(25, 500)).as("healthy station").isZero();
+        assertThat(Waves.slowShare(100, 500)).isCloseTo(StrictMath.exp(-5), within(1e-12));
+        assertThat(Waves.slowShare(500, 500)).as("mean at the SLO: a third").isCloseTo(StrictMath.exp(-1), within(1e-12));
+        assertThat(Waves.slowShare(5000, 500)).isGreaterThan(0.9);
+    }
+
+    @Test
+    void aFullOutageAtBaselineTrafficLastsAboutFourteenSeconds() {
+        GameBalance b = GameBalance.DEFAULT;
+        double allowance = (1 - b.slo()) * 100 * b.budgetWindowS(); // station baseline: 100 rps
+        assertThat(allowance / 100).isCloseTo(14.4, within(1e-9));
     }
 
     @Test

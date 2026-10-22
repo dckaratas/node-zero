@@ -1,7 +1,7 @@
 {
   "type" : "snapshot",
   "tick" : 5404,
-  "credits" : 1950,
+  "credits" : 1996,
   "wave" : 5,
   "phase" : "COMPLETE",
   "shield" : 0.0,
@@ -40,8 +40,8 @@
   }, {
     "wave" : 2,
     "survived" : true,
-    "shield" : 0.8333333333333335,
-    "earned" : 250,
+    "shield" : 0.9861111111111112,
+    "earned" : 296,
     "postmortemRight" : true
   }, {
     "wave" : 3,
@@ -65,7 +65,7 @@
   "chapter" : {
     "number" : 1,
     "stars" : 2,
-    "averageShield" : 0.3666666666666667,
+    "averageShield" : 0.39722222222222225,
     "postmortemsRight" : 4,
     "postmortems" : 4
   }
