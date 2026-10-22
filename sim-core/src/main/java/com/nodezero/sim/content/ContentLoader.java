@@ -76,6 +76,15 @@ public final class ContentLoader {
             }
         }
 
+        Map<String, ActionDef> actions = new LinkedHashMap<>();
+        for (String file : index.actions()) {
+            for (ActionDef action : read(file, ActionFile.class).actions()) {
+                if (actions.putIfAbsent(action.id(), action) != null) {
+                    problems.add(file + ": duplicate action id '" + action.id() + "'");
+                }
+            }
+        }
+
         Map<String, CodexEntry> codex = new LinkedHashMap<>();
         for (String file : index.codex()) {
             for (CodexEntry entry : read(file, CodexFile.class).codex()) {
@@ -88,12 +97,12 @@ public final class ContentLoader {
         Messages messages = new Messages(read(index.messages().en(), TEXTS), read(index.messages().tr(), TEXTS));
 
         checkReferences(threats, counters, problems);
-        checkCodex(threats, counters, codex, problems);
+        checkCodex(threats, counters, actions, codex, problems);
         checkTexts(threats, counters, messages, problems);
         if (!problems.isEmpty()) {
             throw new ContentException("invalid content:\n  - " + String.join("\n  - ", problems));
         }
-        return new Content(threats, counters, codex, messages);
+        return new Content(threats, counters, actions, codex, messages);
     }
 
     private static void checkReferences(
@@ -118,10 +127,11 @@ public final class ContentLoader {
 
     /** Every codex link resolves, and every entry is linked from somewhere (no dead articles). */
     private static void checkCodex(Map<String, ThreatDef> threats, Map<String, CounterDef> counters,
-            Map<String, CodexEntry> codex, List<String> problems) {
+            Map<String, ActionDef> actions, Map<String, CodexEntry> codex, List<String> problems) {
         Map<String, String> linkedBy = new LinkedHashMap<>();
         threats.values().forEach(t -> t.codex().forEach(id -> linkedBy.putIfAbsent(id, "threat " + t.id())));
         counters.values().forEach(c -> c.codex().forEach(id -> linkedBy.putIfAbsent(id, "counter " + c.id())));
+        actions.values().forEach(a -> a.codex().forEach(id -> linkedBy.putIfAbsent(id, "action " + a.id())));
         linkedBy.forEach((id, owner) -> {
             if (!codex.containsKey(id)) {
                 problems.add(owner + ": unknown codex entry '" + id + "'");
@@ -129,7 +139,7 @@ public final class ContentLoader {
         });
         codex.keySet().stream()
                 .filter(id -> !linkedBy.containsKey(id))
-                .forEach(id -> problems.add("codex " + id + ": not referenced by any threat or counter"));
+                .forEach(id -> problems.add("codex " + id + ": not referenced by any threat, counter or action"));
     }
 
     private static void checkTexts(
@@ -185,10 +195,12 @@ public final class ContentLoader {
     }
 
     /** {@code content/index.yaml}: which files to load, in which order. */
-    record Index(List<String> threats, List<String> counters, List<String> codex, MessageFiles messages) {
+    record Index(List<String> threats, List<String> counters, List<String> actions, List<String> codex,
+            MessageFiles messages) {
         Index {
             threats = Require.orEmpty(threats);
             counters = Require.orEmpty(counters);
+            actions = Require.orEmpty(actions);
             codex = Require.orEmpty(codex);
             Require.present(messages, "messages");
         }
@@ -210,6 +222,12 @@ public final class ContentLoader {
     record CounterFile(List<CounterDef> counters) {
         CounterFile {
             counters = Require.nonEmpty(counters, "counters");
+        }
+    }
+
+    record ActionFile(List<ActionDef> actions) {
+        ActionFile {
+            actions = Require.nonEmpty(actions, "actions");
         }
     }
 

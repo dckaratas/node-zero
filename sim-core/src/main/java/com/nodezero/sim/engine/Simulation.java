@@ -50,6 +50,7 @@ public final class Simulation {
                 case Command.StartWave c -> throw gameCommand(c);
                 case Command.ApplyCounter c -> throw gameCommand(c);
                 case Command.AnswerPostmortem c -> throw gameCommand(c);
+                case Command.RunAction c -> throw gameCommand(c);
                 case Command.UnlockInsight c -> throw gameCommand(c);
             }
         }

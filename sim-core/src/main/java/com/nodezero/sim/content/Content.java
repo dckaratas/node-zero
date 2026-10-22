@@ -8,12 +8,14 @@ import java.util.Map;
 public record Content(
         Map<String, ThreatDef> threats,
         Map<String, CounterDef> counters,
+        Map<String, ActionDef> actions,
         Map<String, CodexEntry> codex,
         Messages messages) {
 
     public Content {
         threats = Collections.unmodifiableMap(new LinkedHashMap<>(threats));
         counters = Collections.unmodifiableMap(new LinkedHashMap<>(counters));
+        actions = Collections.unmodifiableMap(new LinkedHashMap<>(actions));
         codex = Collections.unmodifiableMap(new LinkedHashMap<>(codex));
     }
 
@@ -23,6 +25,10 @@ public record Content(
 
     public CounterDef counter(String id) {
         return lookup(counters, id, "counter");
+    }
+
+    public ActionDef action(String id) {
+        return lookup(actions, id, "action");
     }
 
     private static <T> T lookup(Map<String, T> byId, String id, String kind) {

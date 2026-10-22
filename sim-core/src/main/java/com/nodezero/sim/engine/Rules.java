@@ -1,5 +1,6 @@
 package com.nodezero.sim.engine;
 
+import com.nodezero.sim.content.ActionDef;
 import com.nodezero.sim.content.Content;
 import com.nodezero.sim.content.CounterDef;
 import com.nodezero.sim.content.ModelKind;
@@ -37,6 +38,7 @@ public final class Rules {
     private final ThreatDef[] threatByWave;
     private final int chapter;
     private final Map<String, CounterRules> counters;
+    private final Map<String, ActionRules> actions;
 
     public Rules(StationLayout station, Content content) {
         this(station, content, GameBalance.DEFAULT);
@@ -50,6 +52,7 @@ public final class Rules {
         checkStation(problems);
         checkThreats(problems);
         this.counters = resolveCounters(problems);
+        this.actions = resolveActions(problems);
         if (!problems.isEmpty()) {
             throw new IllegalArgumentException("invalid rules:\n  - " + String.join("\n  - ", problems));
         }
@@ -82,6 +85,14 @@ public final class Rules {
     /** The threat a wave brings, or {@code null} for a quiet wave. */
     public ThreatDef threatForWave(int wave) {
         return wave > 0 && wave < threatByWave.length ? threatByWave[wave] : null;
+    }
+
+    ActionRules action(String id) {
+        ActionRules rules = actions.get(id);
+        if (rules == null) {
+            throw new IllegalArgumentException("unknown action: " + id);
+        }
+        return rules;
     }
 
     CounterRules counter(String id) {
@@ -140,8 +151,9 @@ public final class Rules {
         Map<String, CounterRules> resolved = new LinkedHashMap<>();
         for (CounterDef def : content.counters().values()) {
             List<Effect> base = new ArrayList<>();
-            addEffect(def.id(), def.effect(), base, problems);
-            def.sideEffect().forEach(e -> addEffect(def.id(), e, base, problems));
+            String owner = "counter " + def.id();
+            addCounterEffect(owner, def.effect(), base, problems);
+            def.sideEffect().forEach(e -> addCounterEffect(owner, e, base, problems));
 
             Map<String, CounterRules.Variant> variants = new LinkedHashMap<>();
             if (def.options().isEmpty()) {
@@ -149,7 +161,7 @@ public final class Rules {
             }
             for (CounterDef.CounterOption option : def.options()) {
                 List<Effect> effects = new ArrayList<>(base);
-                option.sideEffect().forEach(e -> addEffect(def.id(), e, effects, problems));
+                option.sideEffect().forEach(e -> addCounterEffect(owner, e, effects, problems));
                 double applyTime = option.applyTimeS() != null ? option.applyTimeS() : def.applyTimeS();
                 variants.put(option.id(), new CounterRules.Variant(applyTime, List.copyOf(effects)));
             }
@@ -158,28 +170,75 @@ public final class Rules {
         return Collections.unmodifiableMap(resolved);
     }
 
-    private void addEffect(String counterId, CounterDef.EffectSpec spec, List<Effect> into, List<String> problems) {
+    private void addCounterEffect(String owner, CounterDef.EffectSpec spec, List<Effect> into, List<String> problems) {
+        Effect effect = effect(owner, spec.type(), spec.target(), spec.value(), problems);
+        if (effect != null && effect.kind().timing == EffectKind.Timing.INSTANT) {
+            problems.add(owner + ": " + spec.type() + " is an incident action effect");
+        } else if (effect != null) {
+            into.add(effect);
+        }
+    }
+
+    private Map<String, ActionRules> resolveActions(List<String> problems) {
+        Map<String, ActionRules> resolved = new LinkedHashMap<>();
+        for (ActionDef def : content.actions().values()) {
+            String owner = "action " + def.id();
+            List<Step> base = new ArrayList<>();
+            def.effects().forEach(e -> addStep(owner, e, base, problems));
+            Map<String, List<Step>> variants = new LinkedHashMap<>();
+            if (def.options().isEmpty()) {
+                variants.put("", List.copyOf(base));
+            }
+            for (ActionDef.ActionOption option : def.options()) {
+                List<Step> steps = new ArrayList<>(base);
+                option.effects().forEach(e -> addStep(owner, e, steps, problems));
+                variants.put(option.id(), List.copyOf(steps));
+            }
+            resolved.put(def.id(), new ActionRules(def, Collections.unmodifiableMap(variants),
+                    Math.round(def.cooldownS() / SimConstants.DT)));
+        }
+        return Collections.unmodifiableMap(resolved);
+    }
+
+    /** Instant effects happen when the action runs; build-time effects (downtime, cold JVM) need a window. */
+    private void addStep(String owner, ActionDef.ActionEffect spec, List<Step> into, List<String> problems) {
+        Effect effect = effect(owner, spec.type(), spec.target(), spec.value(), problems);
+        if (effect == null) {
+            return;
+        }
+        EffectKind.Timing timing = effect.kind().timing;
+        if (spec.instant() && timing != EffectKind.Timing.INSTANT && timing != EffectKind.Timing.NARRATIVE) {
+            problems.add(owner + ": " + spec.type() + " needs from_s and to_s");
+        } else if (!spec.instant() && timing != EffectKind.Timing.BUILD) {
+            problems.add(owner + ": " + spec.type() + " cannot have a window");
+        } else {
+            long from = spec.instant() ? 0 : Math.round(spec.fromS() / SimConstants.DT);
+            long to = spec.instant() ? 0 : Math.round(spec.toS() / SimConstants.DT);
+            into.add(new Step(effect, spec.instant(), from, to));
+        }
+    }
+
+    private Effect effect(String owner, String type, ResourceId target, Double value, List<String> problems) {
         EffectKind kind;
         try {
             // Locale.ROOT: under tr_TR "write_lock".toUpperCase() would yield "WRİTE_LOCK".
-            kind = EffectKind.valueOf(spec.type().toUpperCase(Locale.ROOT));
+            kind = EffectKind.valueOf(type.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            problems.add("counter " + counterId + ": unknown effect type '" + spec.type() + "'");
-            return;
+            problems.add(owner + ": unknown effect type '" + type + "'");
+            return null;
         }
         if (kind.targetKind != null) {
-            ResourceModel<?, ?> model = spec.target() == null ? null : station.models().get(spec.target());
+            ResourceModel<?, ?> model = target == null ? null : station.models().get(target);
             if (model == null || kindOf(model) != kind.targetKind) {
-                problems.add("counter " + counterId + ": " + spec.type() + " needs a " + kind.targetKind
-                        + " target, got " + spec.target());
-                return;
+                problems.add(owner + ": " + type + " needs a " + kind.targetKind + " target, got " + target);
+                return null;
             }
         }
-        if (kind.needsValue && spec.value() == null) {
-            problems.add("counter " + counterId + ": " + spec.type() + " needs a value");
-            return;
+        if (kind.needsValue && value == null) {
+            problems.add(owner + ": " + type + " needs a value");
+            return null;
         }
-        into.add(new Effect(kind, spec.target(), spec.value() == null ? 0 : spec.value()));
+        return new Effect(kind, target, value == null ? 0 : value);
     }
 
     private ThreatDef[] indexByWave() {
@@ -196,6 +255,34 @@ public final class Rules {
 
     /** One resolved effect of a counter. */
     record Effect(EffectKind kind, ResourceId target, double value) {}
+
+    /**
+     * An action effect: instant ones apply when the action runs; the others hold for ticks
+     * {@code [start + fromTick, start + toTick)}.
+     */
+    record Step(Effect effect, boolean instant, long fromTick, long toTick) {}
+
+    /** An action with its steps resolved per option ({@code ""} when it has none) and its cooldown in ticks. */
+    record ActionRules(ActionDef def, Map<String, List<Step>> variants, long cooldownTicks) {
+
+        List<Step> steps(String option) {
+            List<Step> steps = variants.get(option == null ? "" : option);
+            if (steps == null) {
+                throw new IllegalArgumentException("action " + def.id() + " has no option '" + option
+                        + "'; choose one of " + variants.keySet());
+            }
+            return steps;
+        }
+
+        /** Ticks after the start until the last windowed effect ends (0 for an instant action). */
+        long durationTicks(String option) {
+            long end = 0;
+            for (Step step : steps(option)) {
+                end = Math.max(end, step.toTick());
+            }
+            return end;
+        }
+    }
 
     /** A counter with its effects resolved per option ({@code ""} when it has no options). */
     record CounterRules(CounterDef def, Map<String, Variant> variants) {

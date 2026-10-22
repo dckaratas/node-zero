@@ -67,6 +67,7 @@ export class CounterPanel {
       case 'queued': return 'Queued: waiting for the station';
       case 'locked': return `Needs ${state.needs.map((id) => this.names.get(id) ?? id).join(', ')}`;
       case 'unaffordable': return 'Not enough credits';
+      case 'no-crew': return 'Crew too tired: wait for the next shift';
       case 'available': return '';
     }
   }
@@ -84,7 +85,9 @@ export class CounterPanel {
       title.append(' ', badge);
     }
     const tech = paragraph('tech', item.realTech);
-    const cost = paragraph('cost', `${item.credits} cr · upkeep ${item.upkeepPerWave}/wave · ${item.applyTimeS} s to build`);
+    const crew = item.toil > 0 ? ` · crew ${item.toil}` : '';
+    const cost = paragraph('cost',
+      `${item.credits} cr · upkeep ${item.upkeepPerWave}/wave · ${item.applyTimeS} s to build${crew}`);
     const tradeoff = paragraph('tradeoff', item.tradeoff);
     root.append(title, tech, cost, tradeoff);
 

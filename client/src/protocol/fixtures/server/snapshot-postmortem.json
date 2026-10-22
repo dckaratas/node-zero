@@ -37,5 +37,7 @@
     "shield" : 1.0,
     "earned" : 300,
     "postmortemRight" : null
-  } ]
+  } ],
+  "crew" : 8,
+  "actions" : [ ]
 }

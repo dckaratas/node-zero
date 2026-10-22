@@ -1,0 +1,77 @@
+# Chapter 1 incident actions (slice 7b, ADR-0018 AF/AH). They cost crew (toil), not credits, and have a cooldown.
+# Effects without from_s/to_s happen once when the action runs; with them they hold in that window (seconds after start).
+# Actions soothe symptoms; the lasting fix is still a counter (mitigation vs. fix).
+actions:
+  - id: restart-app
+    name: { en: "Restart the service", tr: "Servisi yeniden başlat" }
+    real_tech: "systemctl restart node-01"
+    detail:
+      en: "Drops every queued and in-flight request and frees space held by deleted log files. 10 s of downtime, then 20 s of a cold JVM (slower until JIT warms up). If load or a slow query caused the jam, it comes back."
+      tr: "Kuyruktaki ve işlenen tüm istekleri düşürür, silinmiş log dosyalarının tuttuğu yeri boşaltır. 10 sn kesinti, ardından 20 sn soğuk JVM (JIT ısınana kadar yavaş). Tıkanıklığı yük ya da yavaş sorgu yaptıysa geri gelir."
+    toil: 2
+    cooldown_s: 30
+    effects:
+      - { type: reset_queues }
+      - { type: free_orphaned_disk }
+      - { type: downtime, target: cpu, value: 10, from_s: 0, to_s: 10 }
+      - { type: cold_start, target: cpu, value: 1.5, from_s: 10, to_s: 30 }
+    codex: [mitigation-vs-fix]
+
+  - id: clear-disk
+    name: { en: "Free disk space", tr: "Disk alanı aç" }
+    real_tech: "truncate / find -delete / rm"
+    detail:
+      en: "Removes logs by hand. How you remove them matters."
+      tr: "Logları elle siler. Nasıl sildiğin önemli."
+    toil: 1
+    cooldown_s: 10
+    options:
+      - id: truncate
+        name: { en: "truncate -s 0 app.log", tr: "truncate -s 0 app.log" }
+        detail:
+          en: "Empties the active log in place: the space is free at once, the log history is gone."
+          tr: "Aktif logu yerinde boşaltır: yer hemen açılır, log geçmişi kaybolur."
+        effects:
+          - { type: free_logs, value: 0.9 }
+          - { type: less_debug_context }
+      - id: archives
+        name: { en: "Delete old .gz archives", tr: "Eski .gz arşivlerini sil" }
+        detail:
+          en: "Safe: rotated archives nobody reads. Frees a little, once."
+          tr: "Güvenli: kimsenin okumadığı döndürülmüş arşivler. Az yer açar, bir kez."
+        effects:
+          - { type: free_archives, target: disk, value: 8 }
+      - id: rm
+        name: { en: "rm app.log", tr: "rm app.log" }
+        detail:
+          en: "Deletes the active log file."
+          tr: "Aktif log dosyasını siler."
+        effects:
+          - { type: orphan_logs, value: 0.9 }
+    codex: [deleted-open-files]
+
+  - id: cancel-queries
+    name: { en: "Cancel long queries", tr: "Uzun sorguları iptal et" }
+    real_tech: "SELECT pg_cancel_backend(pid) FROM pg_stat_activity"
+    detail:
+      en: "Cancels waiting and running queries to free the connection pool now. Cancelled requests fail, and a background job retries after about 10 s."
+      tr: "Bağlantı havuzunu hemen boşaltmak için bekleyen ve çalışan sorguları iptal eder. İptal edilen istekler başarısız olur; arka plan işi ~10 sn sonra yeniden dener."
+    toil: 1
+    cooldown_s: 15
+    effects:
+      - { type: cancel_queries }
+      - { type: pause_job, from_s: 0, to_s: 10 }
+    codex: [mitigation-vs-fix]
+
+  - id: rollback
+    name: { en: "Roll back the last deploy", tr: "Son deploy'u geri al" }
+    real_tech: "Redeploy the previous release"
+    detail:
+      en: "Reverts whatever the last deploy changed. 5 s of downtime. Fixes nothing the deploy did not cause."
+      tr: "Son deploy'un değiştirdiği her şeyi geri alır. 5 sn kesinti. Deploy'un yol açmadığı hiçbir şeyi düzeltmez."
+    toil: 3
+    cooldown_s: 60
+    effects:
+      - { type: rollback_deploy }
+      - { type: downtime, target: cpu, value: 5, from_s: 0, to_s: 5 }
+    codex: [mitigation-vs-fix]

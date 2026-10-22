@@ -15,7 +15,7 @@ describe('server → client contract', () => {
   it('has a fixture for every message type', () => {
     expect(Object.keys(serverFixtures).map(name).sort()).toEqual(
       ['catalog', 'codex', 'error', 'paused', 'rejected', 'snapshot-burning', 'snapshot-chapter', 'snapshot-delta',
-        'snapshot-keyframe', 'snapshot-postmortem', 'welcome']);
+        'snapshot-incident', 'snapshot-keyframe', 'snapshot-postmortem', 'welcome']);
   });
 
   // catalog and codex are HTTP bodies, not socket messages.
@@ -51,6 +51,17 @@ describe('server → client contract', () => {
     expect(pm?.questionKey).toBe('pm.log_storm.q');
     expect(pm?.options).toHaveLength(4);
     expect(pm?.correct).toBeNull();
+  });
+
+  it('sends the crew and the incident actions it ran', () => {
+    const s = parseServerMessage(fixture('snapshot-incident'));
+    if (s.type !== 'snapshot') throw new Error('expected a snapshot');
+    expect(s.crew).toBe(5);
+    expect(s.actions?.map((a) => a.id)).toEqual(['clear-disk', 'restart-app']);
+    expect(s.actions?.[0]?.option).toBe('rm');
+    const catalog = parseCatalog(fixture('catalog'));
+    expect(catalog.crewPerShift).toBe(8);
+    expect(catalog.actions[0]?.options.map((o) => o.id)).toEqual(['truncate', 'archives', 'rm']);
   });
 
   it('sends how fast the shield burns', () => {
@@ -91,6 +102,7 @@ describe('client → server contract', () => {
     'start-wave': { type: 'start_wave', wave: 1 },
     'apply-counter': { type: 'apply_counter', counter: 'create-index', option: 'concurrently' },
     'answer-postmortem': { type: 'answer_postmortem', option: 'b' },
+    'run-action': { type: 'run_action', action: 'clear-disk', option: 'truncate' },
     pause: { type: 'pause' },
     resume: { type: 'resume' },
   };

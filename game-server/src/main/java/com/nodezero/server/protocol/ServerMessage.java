@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.nodezero.sim.engine.Observation;
+import com.nodezero.sim.state.ActionRun;
 import com.nodezero.sim.state.WaveResult;
 import com.nodezero.sim.state.WaveState;
 import java.util.List;
@@ -33,9 +34,10 @@ public sealed interface ServerMessage {
 
     /**
      * The player's fog-of-war view ({@link Observation}), flattened. Sent only when something changed
-     * ({@link SnapshotStream}); {@code insights}, {@code counters}, {@code codex} and {@code results} are omitted (null)
-     * when unchanged since the previous snapshot, so the client keeps its last copy. {@code postmortem} is sent whenever
-     * one is open or just answered, and absent otherwise; {@code chapter} likewise once the chapter is won.
+     * ({@link SnapshotStream}); {@code insights}, {@code counters}, {@code codex}, {@code results} and
+     * {@code actions} are omitted (null) when unchanged since the previous snapshot, so the client keeps its
+     * last copy. {@code postmortem} is sent whenever one is open or just answered, and absent otherwise;
+     * {@code chapter} likewise once the chapter is won.
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record Snapshot(
@@ -53,13 +55,15 @@ public sealed interface ServerMessage {
             Observation.Postmortem postmortem,
             List<String> codex,
             List<WaveResult> results,
-            Observation.Chapter chapter) implements ServerMessage {
+            Observation.Chapter chapter,
+            int crew,
+            List<ActionRun> actions) implements ServerMessage {
 
         /** Every field present: a keyframe. */
         public static Snapshot full(Observation o) {
             return new Snapshot(o.tick(), o.credits(), o.wave(), o.phase(), o.shield(), o.burnRate(), o.shieldEmptyInS(),
                     o.metrics(), o.signals(), o.insights(), o.counters(), o.postmortem(), o.codex(), o.results(),
-                    o.chapter());
+                    o.chapter(), o.crew(), o.actions());
         }
     }
 

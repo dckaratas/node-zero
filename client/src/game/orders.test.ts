@@ -5,14 +5,14 @@ import type { View } from './store';
 
 function item(id: string, credits: number, requiresCounters: string[] = []): CatalogItem {
   return {
-    id, name: id, realTech: id, credits, upkeepPerWave: 0, applyTimeS: 5, requiresCounters,
+    id, name: id, realTech: id, credits, upkeepPerWave: 0, toil: 0, applyTimeS: 5, requiresCounters,
     requiresInsight: null, grantsInsights: [], tradeoff: '', options: [],
   };
 }
 
 function view(credits: number, counters: View['counters'] = [], tick = 100): View {
   return { tick, credits, wave: 0, phase: 'PREPARATION', shield: 1, burnRate: 0, shieldEmptyInS: -1, metrics: {},
-    signals: [], insights: [], counters, postmortem: null, codex: [], results: [], chapter: null };
+    signals: [], insights: [], counters, postmortem: null, codex: [], results: [], chapter: null, crew: 8, actions: [] };
 }
 
 const prometheus = item('prometheus', 200);

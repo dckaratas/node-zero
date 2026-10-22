@@ -12,5 +12,7 @@
   "insights" : [ ],
   "counters" : [ ],
   "codex" : [ ],
-  "results" : [ ]
+  "results" : [ ],
+  "crew" : 8,
+  "actions" : [ ]
 }

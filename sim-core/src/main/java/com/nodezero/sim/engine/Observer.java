@@ -67,7 +67,8 @@ final class Observer {
         Observation.Chapter chapter = ChapterScore.summary(rules.chapter(), rules.lastWave(), p.results(),
                 p.postmortem());
         return new Observation(s.tick(), p.credits(), wave.number(), wave.phase(), shield, burnRate, emptyInS,
-                metrics, signals, p.insights(), counters, postmortem(p), p.codex(), p.results(), chapter);
+                metrics, signals, p.insights(), counters, postmortem(p), p.codex(), p.results(), chapter,
+                p.ops().crew(), p.ops().runs());
     }
 
     private Observation.Postmortem postmortem(Progress p) {

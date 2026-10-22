@@ -1,0 +1,30 @@
+{
+  "type" : "snapshot",
+  "tick" : 40,
+  "credits" : 1000,
+  "wave" : 2,
+  "phase" : "RUNNING",
+  "shield" : 0.9217251127967052,
+  "burnRate" : 99.99999999999991,
+  "shieldEmptyInS" : 13.272841624272566,
+  "metrics" : { },
+  "signals" : [ ],
+  "insights" : [ ],
+  "counters" : [ ],
+  "codex" : [ "deleted-open-files", "mitigation-vs-fix" ],
+  "results" : [ ],
+  "crew" : 5,
+  "actions" : [ {
+    "id" : "clear-disk",
+    "option" : "rm",
+    "startTick" : 20,
+    "endTick" : 20,
+    "readyTick" : 120
+  }, {
+    "id" : "restart-app",
+    "option" : null,
+    "startTick" : 30,
+    "endTick" : 330,
+    "readyTick" : 330
+  } ]
+}

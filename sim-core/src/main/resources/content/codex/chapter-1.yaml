@@ -111,6 +111,30 @@ codex:
 
         Ham hata sayısı yerine yakma hızına alarm kurmak, sorunun ne kadar acil olduğunu söyler. Google SRE Workbook bir saat boyunca 14,4× yakmada nöbetçiyi uyandırır (30 günlük bütçenin %2'si) ve yavaş yakmalar için kayıt açar. NODE ZERO'daki kalkan bir dalganın bütçesidir; yakma hızı ve kalan süre yanında görünür.
 
+  - id: mitigation-vs-fix
+    title: { en: "Mitigation vs. fix", tr: "Yatıştırma ve çözüm" }
+    body:
+      en: |-
+        During an incident the first goal is to stop the bleeding: restart, roll back, cancel queries, shed load. These mitigations buy time, but they rarely remove the cause, and most have a price of their own: a restart drops every request in flight and starts a cold JVM, a rollback takes the new features with it.
+
+        The fix comes after, once the cause is known: an index, more capacity, a separate pool. Good postmortems keep the two apart. "We restarted and it went away" is a mitigation, not a root cause.
+      tr: |-
+        Bir olay sırasında ilk hedef kanamayı durdurmaktır: yeniden başlatmak, geri almak, sorguları iptal etmek, yük atmak. Bu yatıştırmalar zaman kazandırır ama nedeni nadiren ortadan kaldırır ve çoğunun kendi bedeli vardır: restart işlenen tüm istekleri düşürür ve soğuk bir JVM başlatır, rollback yeni özellikleri de götürür.
+
+        Çözüm sonra, neden bilinince gelir: bir indeks, daha fazla kapasite, ayrı bir havuz. İyi postmortemler ikisini ayırır. "Restart ettik, geçti" bir yatıştırmadır, kök neden değil.
+
+  - id: deleted-open-files
+    title: { en: "Deleted but still open", tr: "Silinmiş ama hâlâ açık" }
+    body:
+      en: |-
+        On Linux, rm removes a file's name, not its data. While a process still holds the file open, for example the application writing its log, the blocks stay allocated and df still shows the disk as full. The space comes back only when the process closes the file or restarts.
+
+        lsof +L1 lists such deleted-but-open files. To empty a live log, truncate it in place (truncate -s 0 app.log or : > app.log); better still, let logrotate with copytruncate or a reopen signal do it.
+      tr: |-
+        Linux'ta rm bir dosyanın adını siler, verisini değil. Bir süreç dosyayı hâlâ açık tutuyorsa (örneğin logunu yazan uygulama) bloklar ayrılmış kalır ve df diski hâlâ dolu gösterir. Yer ancak süreç dosyayı kapatınca ya da yeniden başlayınca geri gelir.
+
+        lsof +L1 bu silinmiş ama açık dosyaları listeler. Canlı bir logu boşaltmak için yerinde kesin (truncate -s 0 app.log ya da : > app.log); daha iyisi, copytruncate ya da yeniden açma sinyaliyle logrotate'in yapmasına izin verin.
+
   - id: traffic-heatmap
     title: { en: "Traffic heatmaps", tr: "Trafik ısı haritaları" }
     body:

@@ -1,8 +1,10 @@
 package com.nodezero.server.protocol;
 
+import com.nodezero.sim.content.ActionDef;
 import com.nodezero.sim.content.Content;
 import com.nodezero.sim.content.CounterDef;
 import com.nodezero.sim.content.Language;
+import com.nodezero.sim.engine.Rules;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
@@ -25,6 +27,7 @@ public final class CounterCatalog {
             String realTech,
             int credits,
             int upkeepPerWave,
+            int toil,
             double applyTimeS,
             List<String> requiresCounters,
             String requiresInsight,
@@ -35,18 +38,36 @@ public final class CounterCatalog {
     /** @param applyTimeS overrides the counter's build time, or {@code null} */
     public record Option(String id, String name, Double applyTimeS, String tradeoff) {}
 
-    /** Response body of {@code GET /api/sessions/{id}/catalog}. */
-    public record Catalog(String language, List<Item> counters) {}
+    /** An incident action card (slice 7b): costs crew, not credits, and cools down. */
+    public record Action(String id, String name, String realTech, String detail, int toil, double cooldownS,
+            List<ActionOption> options) {}
+
+    public record ActionOption(String id, String name, String detail) {}
+
+    /**
+     * Response body of {@code GET /api/sessions/{id}/catalog}. Actions are never gated: on-call can always
+     * restart or roll back, knowing when it helps is the lesson.
+     */
+    public record Catalog(String language, int crewPerShift, List<Item> counters, List<Action> actions) {}
 
     private final Map<Language, List<Item>> byLanguage = new EnumMap<>(Language.class);
+    private final Map<Language, List<Action>> actionsByLanguage = new EnumMap<>(Language.class);
+    private final int crewPerShift;
 
-    public CounterCatalog(Content content) {
+    public CounterCatalog(Rules rules) {
+        Content content = rules.content();
+        this.crewPerShift = rules.balance().crewPerShift();
         for (Language language : Language.values()) {
             List<Item> items = new ArrayList<>();
             for (CounterDef def : content.counters().values()) {
                 items.add(item(def, language, content));
             }
             byLanguage.put(language, List.copyOf(items));
+            List<Action> actions = new ArrayList<>();
+            for (ActionDef def : content.actions().values()) {
+                actions.add(action(def, language));
+            }
+            actionsByLanguage.put(language, List.copyOf(actions));
         }
     }
 
@@ -58,7 +79,17 @@ public final class CounterCatalog {
                 visible.add(item);
             }
         }
-        return new Catalog(language.name().toLowerCase(Locale.ROOT), List.copyOf(visible));
+        return new Catalog(language.name().toLowerCase(Locale.ROOT), crewPerShift, List.copyOf(visible),
+                actionsByLanguage.get(language));
+    }
+
+    private static Action action(ActionDef def, Language language) {
+        List<ActionOption> options = new ArrayList<>();
+        for (ActionDef.ActionOption o : def.options()) {
+            options.add(new ActionOption(o.id(), o.name().in(language), o.detail().in(language)));
+        }
+        return new Action(def.id(), def.name().in(language), def.realTech(), def.detail().in(language), def.toil(),
+                def.cooldownS(), List.copyOf(options));
     }
 
     private static Item item(CounterDef def, Language language, Content content) {
@@ -68,7 +99,7 @@ public final class CounterCatalog {
                     content.messages().text(language, o.tradeoffKey())));
         }
         return new Item(def.id(), def.name().in(language), def.realTech(), def.cost().credits(),
-                def.cost().upkeepPerWave(), def.applyTimeS(), def.requiresCounters(), def.requiresInsight(),
+                def.cost().upkeepPerWave(), def.toil(), def.applyTimeS(), def.requiresCounters(), def.requiresInsight(),
                 def.grantsInsights(), content.messages().text(language, def.tradeoffKey()), List.copyOf(options));
     }
 }

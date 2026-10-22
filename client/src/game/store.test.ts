@@ -4,7 +4,7 @@ import { GameStore } from './store';
 
 function snapshot(tick: number, cpu: number, extra: Partial<Snapshot> = {}): Snapshot {
   return {
-    type: 'snapshot', tick, credits: 1000, wave: 0, phase: 'PREPARATION', shield: 1, burnRate: 0, shieldEmptyInS: -1,
+    type: 'snapshot', tick, credits: 1000, wave: 0, phase: 'PREPARATION', shield: 1, burnRate: 0, shieldEmptyInS: -1, crew: 8,
     metrics: { cpu_utilization: cpu }, signals: [], ...extra,
   };
 }

@@ -41,7 +41,7 @@ Web tabanlı, eğitici bir **bilim kurgu tower defense + sunucu tasarım/yöneti
 | 15 | Oyun sunucusu | Bellekte oturum + replay günlüğü, çekirdek başına tick shard'ı, ham WebSocket + JSON | [0015](adr/0015-game-server-architecture.md) |
 | 16 | İstemci | Vite + TS + PixiJS, sözleşme fixture'ları, sunucuda filtrelenen katalog | [0016](adr/0016-browser-client.md) |
 | 17 | Postmortem/kodeks/i18n | Zorunlu tek denemelik postmortem, sunucuda açılan kodeks, public i18n paketi | [0017](adr/0017-postmortem-codex-i18n.md) |
-| 18 | Olay anı oynanışı | Yakma hızı ve bölüm sonu (7a); müdahale + mürettebat, kaldırma, alarm sırada | [0018](adr/0018-incident-gameplay.md) |
+| 18 | Olay anı oynanışı | Yakma hızı ve bölüm sonu (7a), müdahale eylemleri + mürettebat (7b); kaldırma, alarm sırada | [0018](adr/0018-incident-gameplay.md) |
 
 ## 3. Oyun döngüsü
 ```

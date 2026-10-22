@@ -41,6 +41,11 @@ final class Counters {
         if (def.requiresInsight() != null && !p.insights().contains(def.requiresInsight())) {
             throw new IllegalArgumentException("counter " + def.id() + " needs insight " + def.requiresInsight());
         }
+        // Toil comes out of the same crew as incident actions (decision AG).
+        if (p.ops().crew() < def.toil()) {
+            throw new IllegalArgumentException(
+                    "counter " + def.id() + " needs " + def.toil() + " crew, only " + p.ops().crew() + " left");
+        }
         int cost = def.cost().credits();
         if (p.credits() < cost) {
             throw new IllegalArgumentException(
@@ -50,7 +55,8 @@ final class Counters {
         long activeTick = tick + Math.round(variant.applyTimeS() / SimConstants.DT);
         InstalledCounter installed = new InstalledCounter(def.id(), command.optionId(), tick, activeTick);
         // Buying a counter opens its codex entries (decision AB).
-        return s.withProgress(p.withCredits(p.credits() - cost).withCounter(installed).withCodex(def.codex()));
+        return s.withProgress(p.withCredits(p.credits() - cost).withCounter(installed).withCodex(def.codex())
+                .withOps(p.ops().withCrew(p.ops().crew() - def.toil())));
     }
 
     /**

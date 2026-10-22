@@ -7,8 +7,8 @@ import java.util.Objects;
  * Turns one session's observations into the snapshots worth sending (ADR-0015 addendum, decision T).
  * <ul>
  *   <li>A view equal to the last one sent (ignoring the tick) is skipped: an idle station costs nothing.</li>
- *   <li>{@code insights}, {@code counters}, {@code codex} and {@code results} are sent only when they changed
- *       since the last snapshot.</li>
+ *   <li>{@code insights}, {@code counters}, {@code codex}, {@code results} and {@code actions} are sent only
+ *       when they changed since the last snapshot.</li>
  *   <li>Every {@code keyframeEveryTicks} a full snapshot goes out regardless, as a heartbeat and resync.</li>
  * </ul>
  * The socket is ordered and lossless (TCP, slow clients are disconnected, never skipped), so the
@@ -37,6 +37,7 @@ public final class SnapshotStream {
         boolean counters = keyframe || !now.counters().equals(last.counters());
         boolean codex = keyframe || !now.codex().equals(last.codex());
         boolean results = keyframe || !now.results().equals(last.results());
+        boolean actions = keyframe || !now.actions().equals(last.actions());
         if (keyframe) {
             lastKeyframeTick = now.tick();
         }
@@ -44,7 +45,8 @@ public final class SnapshotStream {
         return new ServerMessage.Snapshot(now.tick(), now.credits(), now.wave(), now.phase(), now.shield(),
                 now.burnRate(), now.shieldEmptyInS(), now.metrics(), now.signals(),
                 insights ? now.insights() : null, counters ? now.counters() : null,
-                now.postmortem(), codex ? now.codex() : null, results ? now.results() : null, now.chapter());
+                now.postmortem(), codex ? now.codex() : null, results ? now.results() : null, now.chapter(),
+                now.crew(), actions ? now.actions() : null);
     }
 
     private static boolean sameView(Observation a, Observation b) {
@@ -61,6 +63,8 @@ public final class SnapshotStream {
                 && Objects.equals(a.postmortem(), b.postmortem())
                 && a.codex().equals(b.codex())
                 && a.results().equals(b.results())
-                && Objects.equals(a.chapter(), b.chapter());
+                && Objects.equals(a.chapter(), b.chapter())
+                && a.crew() == b.crew()
+                && a.actions().equals(b.actions());
     }
 }

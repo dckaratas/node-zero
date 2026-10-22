@@ -14,6 +14,7 @@ import com.nodezero.sim.model.OccupancyModel;
 import com.nodezero.sim.model.OccupancyState;
 import com.nodezero.sim.model.UtilizationModel;
 import com.nodezero.sim.model.UtilizationState;
+import com.nodezero.sim.state.ActionRun;
 import com.nodezero.sim.state.ActiveThreat;
 import com.nodezero.sim.state.GameState;
 import com.nodezero.sim.state.InstalledCounter;
@@ -97,6 +98,7 @@ final class Pipeline {
                 }
             }
         }
+        cpuCost *= m.cpuSlowdown;
         if (!Double.isNaN(m.logUnits)) {
             logUnits = m.logUnits;
         }
@@ -149,7 +151,7 @@ final class Pipeline {
 
     /** A daily job runs for rows / rows_per_minute game minutes, slower when throttled or isolated. */
     private static boolean jobRunning(ThreatDef.Job job, ThreatDef.Consumption c, double rows, double since, Modifiers m) {
-        if (m.jobRescheduled) {
+        if (m.jobRescheduled || m.jobPaused) {
             return false;
         }
         double durationS = rows / job.rowsPerMinute() / m.jobThrottle;
@@ -167,10 +169,22 @@ final class Pipeline {
                 boolean applies = switch (e.kind().timing) {
                     case ACTIVE -> active;
                     case BUILD -> !active;
-                    case STRUCTURAL, NARRATIVE -> false;
+                    case STRUCTURAL, INSTANT, NARRATIVE -> false;
                 };
                 if (applies) {
                     m.apply(e);
+                }
+            }
+        }
+        // Incident actions: their windowed effects (downtime, cold JVM, paused job) hold for a few seconds.
+        for (ActionRun run : progress.ops().runs()) {
+            if (tick >= run.endTick()) {
+                continue;
+            }
+            for (Rules.Step step : rules.action(run.id()).steps(run.option())) {
+                long at = tick - run.startTick();
+                if (!step.instant() && at >= step.fromTick() && at < step.toTick()) {
+                    m.apply(step.effect());
                 }
             }
         }
@@ -215,7 +229,7 @@ final class Pipeline {
         return (UtilizationModel) s.resource(id).model();
     }
 
-    /** What the installed counters change this tick. Mutable, but local to one plan() call. */
+    /** What the installed counters and running incident actions change this tick. Mutable, but local to one plan() call. */
     private static final class Modifiers {
         double logUnits = Double.NaN;
         double drainPerSecond;
@@ -229,6 +243,8 @@ final class Pipeline {
         boolean cpuDown;
         boolean writeLocked;
         double ioLoadFactor = 1;
+        double cpuSlowdown = 1;
+        boolean jobPaused;
 
         void apply(Rules.Effect e) {
             switch (e.kind()) {
@@ -244,10 +260,13 @@ final class Pipeline {
                 case DOWNTIME -> cpuDown = true;
                 case WRITE_LOCK -> writeLocked = true;
                 case EXTRA_LOAD -> ioLoadFactor *= 1 + e.value();
+                case COLD_START -> cpuSlowdown *= e.value();
+                case PAUSE_JOB -> jobPaused = true;
                 case ADD_SERVERS, ADD_SLOTS, SCALE_CAPACITY, ENABLE_PROMETHEUS, ENABLE_POSTGRES_EXPORTER, ENABLE_GRAFANA,
                         RETRY_FAILED, REJECT_WITH_STATUS, LESS_DEBUG_CONTEXT,
                         SHORTER_LOG_HISTORY, PROBLEM_POSTPONED, FAILED_QUERIES, MORE_WAITING_ON_POOL,
-                        JOB_RUNS_LONGER -> { }
+                        JOB_RUNS_LONGER, RESET_QUEUES, FREE_ORPHANED_DISK, FREE_LOGS, ORPHAN_LOGS, FREE_ARCHIVES,
+                        CANCEL_QUERIES, ROLLBACK_DEPLOY -> { }
             }
         }
     }

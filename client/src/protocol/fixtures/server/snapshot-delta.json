@@ -21,5 +21,6 @@
     "disk_forecast" : 1219.8000000000704,
     "traffic_heatmap" : 100.0
   },
-  "signals" : [ ]
+  "signals" : [ ],
+  "crew" : 8
 }

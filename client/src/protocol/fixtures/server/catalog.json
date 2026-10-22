@@ -1,11 +1,13 @@
 {
   "language" : "en",
+  "crewPerShift" : 8,
   "counters" : [ {
     "id" : "prometheus",
     "name" : "Sensor Array",
     "realTech" : "Prometheus + Micrometer",
     "credits" : 200,
     "upkeepPerWave" : 10,
+    "toil" : 0,
     "applyTimeS" : 5.0,
     "requiresCounters" : [ ],
     "requiresInsight" : null,
@@ -18,6 +20,7 @@
     "realTech" : "Grafana",
     "credits" : 150,
     "upkeepPerWave" : 10,
+    "toil" : 0,
     "applyTimeS" : 5.0,
     "requiresCounters" : [ "prometheus" ],
     "requiresInsight" : null,
@@ -30,6 +33,7 @@
     "realTech" : "PostgreSQL CREATE INDEX",
     "credits" : 200,
     "upkeepPerWave" : 0,
+    "toil" : 1,
     "applyTimeS" : 30.0,
     "requiresCounters" : [ ],
     "requiresInsight" : "pg-stat-statements",
@@ -45,6 +49,27 @@
       "name" : "CREATE INDEX CONCURRENTLY",
       "applyTimeS" : 40.0,
       "tradeoff" : "No write lock, but slower and adds database I/O while it builds."
+    } ]
+  } ],
+  "actions" : [ {
+    "id" : "clear-disk",
+    "name" : "Free disk space",
+    "realTech" : "truncate / find -delete / rm",
+    "detail" : "Removes logs by hand. How you remove them matters.",
+    "toil" : 1,
+    "cooldownS" : 10.0,
+    "options" : [ {
+      "id" : "truncate",
+      "name" : "truncate -s 0 app.log",
+      "detail" : "Empties the active log in place: the space is free at once, the log history is gone."
+    }, {
+      "id" : "archives",
+      "name" : "Delete old .gz archives",
+      "detail" : "Safe: rotated archives nobody reads. Frees a little, once."
+    }, {
+      "id" : "rm",
+      "name" : "rm app.log",
+      "detail" : "Deletes the active log file."
     } ]
   } ]
 }

@@ -68,5 +68,7 @@
     "averageShield" : 0.39722222222222225,
     "postmortemsRight" : 4,
     "postmortems" : 4
-  }
+  },
+  "crew" : 8,
+  "actions" : [ ]
 }

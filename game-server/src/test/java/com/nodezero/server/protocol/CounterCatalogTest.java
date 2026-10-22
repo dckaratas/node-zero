@@ -14,7 +14,7 @@ class CounterCatalogTest {
 
     @BeforeAll
     static void setUp() {
-        catalog = new CounterCatalog(Game.chapterOne().rules().content());
+        catalog = new CounterCatalog(Game.chapterOne().rules());
     }
 
     private static List<String> ids(CounterCatalog.Catalog c) {

@@ -67,6 +67,7 @@ export type CardState =
   | { kind: 'queued' }
   | { kind: 'locked'; needs: string[] }
   | { kind: 'unaffordable' }
+  | { kind: 'no-crew' }
   | { kind: 'available' };
 
 /** What a counter card shows, from the server's view plus the client's queued orders. */
@@ -82,5 +83,6 @@ export function cardState(item: CatalogItem, view: View, orders: Orders, tickHz:
   const needs = item.requiresCounters.filter((id) => !owned.has(id));
   if (needs.length > 0) return { kind: 'locked', needs };
   if (item.credits > orders.projectedCredits(view)) return { kind: 'unaffordable' };
+  if (item.toil > view.crew) return { kind: 'no-crew' };
   return { kind: 'available' };
 }

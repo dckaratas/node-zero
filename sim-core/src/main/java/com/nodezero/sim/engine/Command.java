@@ -49,6 +49,18 @@ public sealed interface Command {
         }
     }
 
+    /** Game: the on-call crew runs an incident action (slice 7b), optionally one of its options. */
+    record RunAction(String actionId, String optionId) implements Command {
+
+        public RunAction {
+            Objects.requireNonNull(actionId, "actionId");
+        }
+
+        public RunAction(String actionId) {
+            this(actionId, null);
+        }
+    }
+
     /** Game: the player's answer to the open postmortem (one attempt; ADR-0007). */
     record AnswerPostmortem(String optionId) implements Command {
 

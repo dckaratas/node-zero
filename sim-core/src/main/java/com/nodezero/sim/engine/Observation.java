@@ -1,5 +1,6 @@
 package com.nodezero.sim.engine;
 
+import com.nodezero.sim.state.ActionRun;
 import com.nodezero.sim.state.WaveResult;
 import com.nodezero.sim.state.WaveState;
 import java.util.Collections;
@@ -24,6 +25,8 @@ import java.util.Map;
  * @param codex codex entries the player has opened (ids; texts come from the server by language)
  * @param results how each played wave ended (slice 7a)
  * @param chapter the chapter summary once its last wave is won and reviewed, otherwise {@code null}
+ * @param crew crew points left in this shift (slice 7b)
+ * @param actions latest run of each incident action used, with its cooldown
  */
 public record Observation(
         long tick,
@@ -40,7 +43,9 @@ public record Observation(
         Postmortem postmortem,
         List<String> codex,
         List<WaveResult> results,
-        Chapter chapter) {
+        Chapter chapter,
+        int crew,
+        List<ActionRun> actions) {
 
     /**
      * A root-cause question after a threat wave (ADR-0007/0008). Texts are keys (ADR-0009).
@@ -83,5 +88,6 @@ public record Observation(
         counters = List.copyOf(counters);
         codex = List.copyOf(codex);
         results = List.copyOf(results);
+        actions = List.copyOf(actions);
     }
 }

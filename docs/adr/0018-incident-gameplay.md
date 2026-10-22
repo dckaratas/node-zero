@@ -70,3 +70,29 @@ M/M/c kuyruğunda Erlang-C de aynı üstel sönümü verir. Amaç (kademeli pay,
 - Tepki penceresi ~1 sn'den 14–27 sn'ye çıktı; 7b müdahalelerine yer açıldı. Restart (10 sn kesinti) taban yükte bütçenin ~%70'i.
 - Benchmark (ADR-0014): `step` 3,1–3,4 µs (önce 3,4–3,8; gürültü içinde), bütçe 20 µs.
 - Açık: dalga 2 hâlâ hazırlıksız %100 (disk kalıcı tehdit olarak sonra doluyor); içerik dengesine bırakıldı.
+
+## Ek (Dilim 7b, 2026-10-22): müdahale ve mürettebat
+- İçerik: `content/actions/chapter-1.yaml`. Efektin `from_s`/`to_s` penceresi yoksa eylem anında bir kez olur
+  (`EffectKind.Timing.INSTANT`); varsa o pencerede tutar (kesinti, soğuk JVM, duraklatılmış iş; mevcut `BUILD` türleri).
+  Sayaçlar anlık eylem efekti kullanamaz; yükleyici reddeder.
+- Komut `RunAction(id, option)` → replay'e girer. `Actions` önce bekleme süresine, sonra mürettebata bakar; anlık efektler
+  state'i hemen değiştirir. Düşürülen istekler (`reset_queues`, `cancel_queries`) `WaveState.withExtraFailures` ile kalkana yazılır.
+- Mürettebat: `OpsState` (`Progress.ops`): dalga başına 8 puan, **biten dalga yeni vardiya getirir** (hazırlık + sonraki
+  dalga aynı vardiyada). Sayaçların `toil` alanı aynı bütçeden düşer.
+- `rm` tuzağı: silinen logun payı `orphanedMb`'ye geçer, disk seviyesi değişmez; restart (`free_orphaned_disk`) boşaltır.
+  Log miktarı = disk seviyesi − başlangıç seviyesi − öksüz pay. Eski arşivler bir kez silinebilir.
+- Rollback: tetikleyicisi `event: deploy` olan aktif tehditleri kaldırır (log-storm); başka tehdide etkisi yok.
+- Kodeks: `mitigation-vs-fix`, `deleted-open-files` (eylem ilk çalışınca açılır). Toplam 26 madde.
+- Protokol: snapshot'ta `crew` (her zaman), `actions` (delta: her eylemin son çalışması, `endTick`, `readyTick`);
+  katalogda `crewPerShift`, sayaçlarda `toil`, `actions` kartları (kapısız). İstemci mesajı `run_action`.
+- İstemci: "Incident response" bölümü (seçenek başına bir düğme; olay anında iki adımlı form yok), başlıkta `Crew 6/8`.
+
+| Ölçüm (DEFAULT, hazırlıksız) | Eylemsiz | Eylemle |
+|---|---|---|
+| Dalga 3 · 8. sn restart | ❌ 19,3 sn | ❌ 14,7 sn (aşırı yükte restart işe yaramaz, kesinti üstüne biner) |
+| Dalga 4 · 5. sn restart | ❌ 27,1 sn | ❌ 20,6 sn |
+| Dalga 5 · 2. sn sorgu iptali | ❌ 15,6 sn | ❌ 24,9 sn (iş duraklayınca ~9 sn kazanç) |
+| Dalga 2 · 3. sn rollback | ✅ %100 | ✅ %65 (gereksiz rollback 5 sn kesinti bedeli) |
+
+- Tasarım gereği eylemler semptomu yatıştırır, kalıcı çözüm sayaçtadır; yanlış anda kullanılan eylem kalkanı yakar.
+- Benchmark: `step` ~3,3 µs (değişmedi).

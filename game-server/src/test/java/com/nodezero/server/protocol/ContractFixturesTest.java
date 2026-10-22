@@ -57,6 +57,7 @@ class ContractFixturesTest {
         messages.put("snapshot-postmortem", ServerMessage.Snapshot.full(game.observe(afterLogStorm(game))));
         messages.put("snapshot-burning", ServerMessage.Snapshot.full(game.observe(midSurge())));
         messages.put("snapshot-chapter", ServerMessage.Snapshot.full(game.observe(chapterWon(game))));
+        messages.put("snapshot-incident", ServerMessage.Snapshot.full(game.observe(restartedDuringStorm(game))));
         messages.put("rejected", new ServerMessage.Rejected(new ClientMessage.ApplyCounter("grafana", null),
                 "grafana needs prometheus installed first"));
         messages.put("paused", new ServerMessage.Paused(true));
@@ -79,6 +80,20 @@ class ContractFixturesTest {
         GameState s = game.step(game.newState(7), List.of(new Command.StartWave(3)), 1);
         while (game.observe(s).burnRate() < 5 && s.wave().phase() == WaveState.Phase.RUNNING) {
             s = game.step(s, List.of(), s.tick() + 1);
+        }
+        return s;
+    }
+
+    /** Wave 2 (log storm): the crew restarted the service a few seconds ago and deleted the log the wrong way. */
+    private static GameState restartedDuringStorm(Game game) {
+        GameState s = game.step(game.newState(7), List.of(new Command.StartWave(2)), 1);
+        for (long tick = 2; tick <= 40; tick++) {
+            List<Command> commands = switch ((int) tick) {
+                case 20 -> List.of(new Command.RunAction("clear-disk", "rm"));
+                case 30 -> List.of(new Command.RunAction("restart-app"));
+                default -> List.of();
+            };
+            s = game.step(s, commands, tick);
         }
         return s;
     }
@@ -106,14 +121,15 @@ class ContractFixturesTest {
         }
     }
 
-    /** A sample of the catalog body: one plain counter, one gated by a counter, one with options. */
+    /** A sample of the catalog body: one plain counter, one gated by a counter, one with options, one action. */
     @Test
     void catalogMatchesTheClientFixture() throws IOException {
-        CounterCatalog.Catalog full = new CounterCatalog(Game.chapterOne().rules().content())
+        CounterCatalog.Catalog full = new CounterCatalog(Game.chapterOne().rules())
                 .visible(Language.EN, List.of("pg-stat-statements"));
         List<String> sample = List.of("prometheus", "grafana", "create-index");
-        CounterCatalog.Catalog body = new CounterCatalog.Catalog(full.language(),
-                full.counters().stream().filter(c -> sample.contains(c.id())).toList());
+        CounterCatalog.Catalog body = new CounterCatalog.Catalog(full.language(), full.crewPerShift(),
+                full.counters().stream().filter(c -> sample.contains(c.id())).toList(),
+                full.actions().stream().filter(a -> a.id().equals("clear-disk")).toList());
 
         assertThat(body.counters()).hasSize(3);
         matchFixture("catalog", json.writeValueAsString(body));
@@ -162,6 +178,7 @@ class ContractFixturesTest {
         expected.put("pause", new ClientMessage.Pause());
         expected.put("resume", new ClientMessage.Resume());
         expected.put("answer-postmortem", new ClientMessage.AnswerPostmortem("b"));
+        expected.put("run-action", new ClientMessage.RunAction("clear-disk", "truncate"));
 
         for (Map.Entry<String, ClientMessage> e : expected.entrySet()) {
             Path file = FIXTURES.resolve("client").resolve(e.getKey() + ".json");

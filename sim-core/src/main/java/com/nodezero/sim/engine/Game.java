@@ -2,6 +2,7 @@ package com.nodezero.sim.engine;
 
 import com.nodezero.sim.content.ContentLoader;
 import com.nodezero.sim.state.GameState;
+import com.nodezero.sim.state.OpsState;
 import com.nodezero.sim.state.Progress;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +11,7 @@ import java.util.List;
  * Server-authoritative game step. Pure: the same (state, commands, tick) always gives the same result.
  * Immutable and thread-safe; one instance can serve every session that uses the same rules.
  *
- * <p>Order within a tick: game commands → resource commands → counters becoming active →
+ * <p>Order within a tick: game commands (incl. incident actions) → resource commands → counters becoming active →
  * request pipeline → models advance → error budget and wave bookkeeping.
  */
 public final class Game {
@@ -19,6 +20,7 @@ public final class Game {
     private final Pipeline pipeline;
     private final Waves waves;
     private final Counters counters;
+    private final Actions actions;
     private final Observer observer;
 
     public Game(Rules rules) {
@@ -26,6 +28,7 @@ public final class Game {
         this.pipeline = new Pipeline(rules);
         this.waves = new Waves(rules);
         this.counters = new Counters(rules);
+        this.actions = new Actions(rules);
         this.observer = new Observer(rules);
     }
 
@@ -43,7 +46,9 @@ public final class Game {
     }
 
     public GameState newState(long seed) {
-        return rules.station().initialState(seed).withProgress(Progress.start(rules.balance().startCredits()));
+        GameBalance balance = rules.balance();
+        return rules.station().initialState(seed)
+                .withProgress(Progress.start(balance.startCredits()).withOps(OpsState.start(balance.crewPerShift())));
     }
 
     /** @throws IllegalArgumentException on an out-of-sync tick or a command the rules do not allow */
@@ -56,6 +61,7 @@ public final class Game {
                 case Command.StartWave start -> s = waves.start(s, start.number(), tick);
                 case Command.ApplyCounter apply -> s = counters.apply(s, apply, tick);
                 case Command.AnswerPostmortem answer -> s = waves.answer(s, answer.optionId());
+                case Command.RunAction run -> s = actions.run(s, run, tick);
                 case Command.UnlockInsight unlock -> s = s.withProgress(s.progress().withInsight(unlock.insightId()));
                 case Command.Noop noop -> { }
                 case Command.SetArrivalRate c -> resourceCommands = append(resourceCommands, c);

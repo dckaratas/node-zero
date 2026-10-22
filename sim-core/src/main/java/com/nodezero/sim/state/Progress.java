@@ -2,6 +2,7 @@ package com.nodezero.sim.state;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Game-level state next to the resources: credits, wave and budget, what is active and installed.
@@ -11,6 +12,7 @@ import java.util.List;
  * @param reviewedThreats threats whose postmortem has been answered; each is reviewed once
  * @param codex codex entries the player has opened, in the order they were earned
  * @param results how each played wave ended, by wave number (chapter summary)
+ * @param ops the on-call crew and the incident actions it ran (slice 7b)
  */
 public record Progress(
         int credits,
@@ -21,7 +23,8 @@ public record Progress(
         PostmortemState postmortem,
         List<String> reviewedThreats,
         List<String> codex,
-        List<WaveResult> results) {
+        List<WaveResult> results,
+        OpsState ops) {
 
     public static final Progress NONE = start(0);
 
@@ -32,29 +35,34 @@ public record Progress(
         reviewedThreats = List.copyOf(reviewedThreats);
         codex = List.copyOf(codex);
         results = List.copyOf(results);
+        Objects.requireNonNull(ops, "ops");
     }
 
     public static Progress start(int credits) {
         return new Progress(credits, WaveState.PREPARATION, List.of(), List.of(), List.of(), null, List.of(), List.of(),
-                List.of());
+                List.of(), OpsState.start(0));
     }
 
     public Progress withCredits(int newCredits) {
-        return new Progress(newCredits, wave, activeThreats, counters, insights, postmortem, reviewedThreats, codex, results);
+        return new Progress(newCredits, wave, activeThreats, counters, insights, postmortem,
+                reviewedThreats, codex, results, ops);
     }
 
     public Progress withWave(WaveState newWave) {
-        return new Progress(credits, newWave, activeThreats, counters, insights, postmortem, reviewedThreats, codex, results);
+        return new Progress(credits, newWave, activeThreats, counters, insights, postmortem,
+                reviewedThreats, codex, results, ops);
     }
 
     public Progress withActiveThreats(List<ActiveThreat> newThreats) {
-        return new Progress(credits, wave, newThreats, counters, insights, postmortem, reviewedThreats, codex, results);
+        return new Progress(credits, wave, newThreats, counters, insights, postmortem,
+                reviewedThreats, codex, results, ops);
     }
 
     public Progress withCounter(InstalledCounter counter) {
         List<InstalledCounter> next = new ArrayList<>(counters);
         next.add(counter);
-        return new Progress(credits, wave, activeThreats, next, insights, postmortem, reviewedThreats, codex, results);
+        return new Progress(credits, wave, activeThreats, next, insights, postmortem,
+                reviewedThreats, codex, results, ops);
     }
 
     public Progress withInsight(String insight) {
@@ -63,7 +71,8 @@ public record Progress(
         }
         List<String> next = new ArrayList<>(insights);
         next.add(insight);
-        return new Progress(credits, wave, activeThreats, counters, next, postmortem, reviewedThreats, codex, results);
+        return new Progress(credits, wave, activeThreats, counters, next, postmortem,
+                reviewedThreats, codex, results, ops);
     }
 
     /** Opens, answers or (with {@code null}) clears the postmortem. Answering marks the threat reviewed. */
@@ -73,7 +82,8 @@ public record Progress(
             reviewed = new ArrayList<>(reviewedThreats);
             reviewed.add(newPostmortem.threatId());
         }
-        return new Progress(credits, wave, activeThreats, counters, insights, newPostmortem, reviewed, codex, results);
+        return new Progress(credits, wave, activeThreats, counters, insights, newPostmortem,
+                reviewed, codex, results, ops);
     }
 
     /** Opens codex entries; ones already open keep their place. */
@@ -88,7 +98,7 @@ public record Progress(
             }
         }
         return next == null ? this : new Progress(credits, wave, activeThreats, counters, insights, postmortem,
-                reviewedThreats, next, results);
+                reviewedThreats, next, results, ops);
     }
 
     /**
@@ -114,7 +124,8 @@ public record Progress(
         if (!placed) {
             next.add(result);
         }
-        return new Progress(credits, wave, activeThreats, counters, insights, postmortem, reviewedThreats, codex, next);
+        return new Progress(credits, wave, activeThreats, counters, insights, postmortem,
+                reviewedThreats, codex, next, ops);
     }
 
     /** Stores the postmortem verdict on the result of the wave it reviewed. */
@@ -123,7 +134,13 @@ public record Progress(
         for (WaveResult r : results) {
             next.add(r.wave() == reviewedWave ? r.withPostmortemRight(right) : r);
         }
-        return new Progress(credits, wave, activeThreats, counters, insights, postmortem, reviewedThreats, codex, next);
+        return new Progress(credits, wave, activeThreats, counters, insights, postmortem,
+                reviewedThreats, codex, next, ops);
+    }
+
+    public Progress withOps(OpsState newOps) {
+        return new Progress(credits, wave, activeThreats, counters, insights, postmortem,
+                reviewedThreats, codex, results, newOps);
     }
 
     public boolean isThreatActive(String id) {

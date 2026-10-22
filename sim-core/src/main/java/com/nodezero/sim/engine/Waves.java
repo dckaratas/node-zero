@@ -7,6 +7,7 @@ import com.nodezero.sim.model.UtilizationState;
 import com.nodezero.sim.state.ActiveThreat;
 import com.nodezero.sim.state.GameState;
 import com.nodezero.sim.state.InstalledCounter;
+import com.nodezero.sim.state.OpsState;
 import com.nodezero.sim.state.PostmortemState;
 import com.nodezero.sim.state.Progress;
 import com.nodezero.sim.state.ResourceId;
@@ -84,7 +85,8 @@ final class Waves {
                 plan.arrivalsRps() * SimConstants.DT, failedRps * SimConstants.DT, failedRps, tick);
         if (balance.endWaveOnEmptyShield() && booked.shield(balance.slo()) <= 0) {
             WaveResult failed = new WaveResult(wave.number(), false, booked.shield(balance.slo()), 0, null);
-            return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.FAILED)).withResult(failed)));
+            return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.FAILED)).withResult(failed))
+                    .withOps(newShift(p)));
         }
         if ((tick - wave.startTick() + 1) * SimConstants.DT >= wave.durationS() - 1e-9) {
             return complete(s, p, booked);
@@ -110,7 +112,13 @@ final class Waves {
         WaveResult result = new WaveResult(booked.number(), true, shield, reward - upkeep, null);
         return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.COMPLETE)).withResult(result))
                 .withCredits(p.credits() + reward - upkeep)
-                .withActiveThreats(remaining));
+                .withActiveThreats(remaining)
+                .withOps(newShift(p)));
+    }
+
+    /** A finished wave hands over to a rested crew (decision AG). */
+    private OpsState newShift(Progress p) {
+        return p.ops().withCrew(rules.balance().crewPerShift());
     }
 
     /** The player's one answer to the open postmortem; the right root cause earns the bonus (decision AA). */

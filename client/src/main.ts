@@ -4,6 +4,7 @@ import { Orders } from './game/orders';
 import { Review } from './game/postmortem';
 import { shieldAlert } from './game/shield';
 import { GameStore } from './game/store';
+import { ActionPanel } from './hud/actionPanel';
 import { ChapterDialog } from './hud/chapterDialog';
 import { CodexPanel } from './hud/codexPanel';
 import { CounterPanel } from './hud/counterPanel';
@@ -48,6 +49,7 @@ const connection = new Connection(Connection.defaultUrl(), {
         orders.clear();
         review.reset();
         panel.reset();
+        actionPanel.reset();
         codexPanel.reset();
         catalog.load(session, language);
         hud.setPaused(false);
@@ -104,7 +106,16 @@ const panel = new CounterPanel(hud.countersHost, orders, (item, option) => {
   if (option !== undefined) action.option = option;
   if (send(action)) orders.place(item);
 }, () => tickHz);
-const catalog = new SessionResource('catalog', parseCatalog, (c) => panel.setCatalog(c), (e: unknown) => {
+const actionPanel = new ActionPanel(hud.actionsHost, (action, option) => {
+  const message: ClientAction = { type: 'run_action', action };
+  if (option !== undefined) message.option = option;
+  send(message);
+}, () => tickHz);
+const catalog = new SessionResource('catalog', parseCatalog, (c) => {
+  panel.setCatalog(c);
+  actionPanel.setCatalog(c);
+  hud.setCrewMax(c.crewPerShift);
+}, (e: unknown) => {
   console.error(e);
   hud.showNotice('Could not load the module catalog');
 });
@@ -126,6 +137,7 @@ map.ticker.add((ticker) => {
   map.render(view, ticker.deltaMS);
   hud.render(view, view === undefined || !orders.hasPending() ? undefined : orders.projectedCredits(view));
   panel.render(store.current());
+  actionPanel.render(store.current());
   const latest = store.current();
   // The collapse notice comes first; the summary waits until the last postmortem is closed.
   postmortem.render(shieldAlerts.blocking(now) ? null : latest?.postmortem ?? null);

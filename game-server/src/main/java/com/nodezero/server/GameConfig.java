@@ -18,7 +18,7 @@ class GameConfig {
     /** Resolved once for both languages; requests only filter it. */
     @Bean
     CounterCatalog counterCatalog(Game game) {
-        return new CounterCatalog(game.rules().content());
+        return new CounterCatalog(game.rules());
     }
 
     @Bean

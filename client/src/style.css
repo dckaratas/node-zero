@@ -203,3 +203,10 @@ dialog.chapter table { width: 100%; border-collapse: collapse; font-variant-nume
 dialog.chapter th, dialog.chapter td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--line); }
 dialog.chapter th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
 dialog.chapter ul { padding-left: 0; list-style: none; color: var(--muted); }
+
+/* Incident actions and crew (slice 7b) */
+.hud .crew { font-size: 0.85rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+.hud .crew[data-low='true'] { color: var(--warn); }
+.card.action .ways { display: flex; flex-wrap: wrap; gap: 6px; }
+.card.action .ways button { font-family: ui-monospace, monospace; font-size: 0.8rem; }
+.card.action[data-state='running'] { border-color: var(--warn); }

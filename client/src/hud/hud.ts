@@ -17,6 +17,7 @@ export class Hud {
   private readonly shield = el('div', 'shield');
   private readonly shieldLabel = el('span', 'shield-label');
   private readonly burn = el('span', 'burn');
+  private readonly crew = el('span', 'crew');
   private readonly status = el('span', 'status');
   private readonly notice = el('div', 'notice');
   private readonly startWave = button('Start wave');
@@ -26,10 +27,13 @@ export class Hud {
   private readonly signals = el('ul', 'signals');
   /** Where the counter cards go (CounterPanel). */
   readonly countersHost = el('section', 'counters');
+  /** Where the incident action cards go (ActionPanel). */
+  readonly actionsHost = el('section', 'actions-host');
   /** Where the codex goes (CodexPanel); it brings its own heading. */
   readonly codexHost = el('section', 'codex-host');
   private paused = false;
   private nextWave = 1;
+  private crewMax = 0;
 
   constructor(top: HTMLElement, panel: HTMLElement, send: (action: ClientAction) => void) {
     this.shield.setAttribute('role', 'meter');
@@ -37,14 +41,16 @@ export class Hud {
     this.shield.setAttribute('aria-valuemin', '0');
     this.shield.setAttribute('aria-valuemax', '100');
     this.shield.append(this.shieldBar, this.shieldLabel);
+    this.crew.title = 'On-call crew left this shift: incident actions and some modules cost crew; a finished wave brings a rested shift.';
     this.language.className = 'language';
     this.language.setAttribute('aria-label', 'Content language');
     this.language.title = 'Language of threats, modules, postmortems and the codex';
     this.language.append(...LANGUAGES.map((l) => new Option(l.label, l.code)));
-    top.append(this.wave, this.phase, this.clock, this.shield, this.burn, this.credits, this.startWave, this.pause, this.status,
+    top.append(this.wave, this.phase, this.clock, this.shield, this.burn, this.crew, this.credits, this.startWave, this.pause, this.status,
       this.language);
     // Codex above the long module list: closed articles are one line each.
-    panel.append(heading('Signals'), this.signals, this.notice, this.codexHost, heading('Modules'), this.countersHost,
+    panel.append(heading('Signals'), this.signals, this.notice, heading('Incident response'), this.actionsHost,
+      this.codexHost, heading('Modules'), this.countersHost,
       heading('Metrics'), this.metrics);
 
     this.startWave.onclick = () => send({ type: 'start_wave', wave: this.nextWave });
@@ -60,6 +66,7 @@ export class Hud {
   setContentLanguage(language: ContentLanguage): void {
     this.language.value = language;
     this.countersHost.lang = language;
+    this.actionsHost.lang = language;
     this.codexHost.lang = language;
   }
 
@@ -91,8 +98,16 @@ export class Hud {
     this.startWave.disabled = view.phase === 'RUNNING' || reviewOpen || chapter !== null;
     this.startWave.title = reviewOpen ? 'Answer the postmortem first' : '';
 
+    this.crew.textContent = this.crewMax > 0 ? `Crew ${view.crew}/${this.crewMax}` : `Crew ${view.crew}`;
+    this.crew.dataset['low'] = String(view.crew <= 2);
+
     this.renderMetrics(view.metrics);
     this.renderSignals(view.signals);
+  }
+
+  /** Crew points per shift, from the catalog (slice 7b). */
+  setCrewMax(crew: number): void {
+    this.crewMax = crew;
   }
 
   setPaused(paused: boolean): void {

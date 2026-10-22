@@ -18,7 +18,7 @@ class SnapshotStreamTest {
         Map<String, Double> metrics = new LinkedHashMap<>();
         metrics.put("node_cpu_utilization", cpu);
         return new Observation(tick, 1000, 0, WaveState.Phase.PREPARATION, 1.0, 0, -1, metrics,
-                List.of(), List.of(), counters, null, List.of(), List.of(), null);
+                List.of(), List.of(), counters, null, List.of(), List.of(), null, 8, List.of());
     }
 
     @Test

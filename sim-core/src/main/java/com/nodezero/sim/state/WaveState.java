@@ -58,6 +58,12 @@ public record WaveState(
                 requests + arrived, failedRequests + failed, failedRps, since);
     }
 
+    /** Requests dropped at once outside the request pipeline, e.g. by a restart (slice 7b). */
+    public WaveState withExtraFailures(double failed) {
+        return new WaveState(number, startTick, phase, durationS, windowRequests, requests, failedRequests + failed,
+                lastFailedRps, symptomSinceTick);
+    }
+
     public WaveState in(Phase newPhase) {
         return new WaveState(number, startTick, newPhase, durationS, windowRequests,
                 requests, failedRequests, 0, -1);

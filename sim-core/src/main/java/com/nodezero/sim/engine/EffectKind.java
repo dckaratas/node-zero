@@ -25,10 +25,20 @@ enum EffectKind {
     ADD_SERVERS(Timing.STRUCTURAL, ModelKind.UTILIZATION, true),
     ADD_SLOTS(Timing.STRUCTURAL, ModelKind.OCCUPANCY, true),
     SCALE_CAPACITY(Timing.STRUCTURAL, ModelKind.FILL, true),
-    // Hurt only while the counter is being built (between apply and active).
+    // Hurt only while the counter is being built (between apply and active), or in an action's window.
     DOWNTIME(Timing.BUILD, ModelKind.UTILIZATION, true),
     WRITE_LOCK(Timing.BUILD, ModelKind.OCCUPANCY, true),
     EXTRA_LOAD(Timing.BUILD, ModelKind.UTILIZATION, true),
+    COLD_START(Timing.BUILD, ModelKind.UTILIZATION, true),
+    PAUSE_JOB(Timing.BUILD, null, false),
+    // Incident actions (slice 7b): happen once, when the action runs.
+    RESET_QUEUES(Timing.INSTANT, null, false),
+    FREE_ORPHANED_DISK(Timing.INSTANT, null, false),
+    FREE_LOGS(Timing.INSTANT, null, true),
+    ORPHAN_LOGS(Timing.INSTANT, null, true),
+    FREE_ARCHIVES(Timing.INSTANT, ModelKind.FILL, true),
+    CANCEL_QUERIES(Timing.INSTANT, null, false),
+    ROLLBACK_DEPLOY(Timing.INSTANT, null, false),
     // Shown to the player and explained in the codex; no simulated effect of their own.
     RETRY_FAILED(Timing.NARRATIVE, null, false),
     REJECT_WITH_STATUS(Timing.NARRATIVE, null, false),
@@ -43,6 +53,7 @@ enum EffectKind {
         ACTIVE,
         STRUCTURAL,
         BUILD,
+        INSTANT,
         NARRATIVE
     }
 

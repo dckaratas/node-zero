@@ -8,6 +8,7 @@ export type ClientAction =
   | { type: 'start_wave'; wave: number }
   | { type: 'apply_counter'; counter: string; option?: string }
   | { type: 'answer_postmortem'; option: string }
+  | { type: 'run_action'; action: string; option?: string }
   | { type: 'pause' }
   | { type: 'resume' };
 
@@ -20,7 +21,7 @@ export interface Welcome {
   snapshotHz: number;
 }
 
-/** Fog-of-war view. Delta fields (insights, counters, codex, results) are absent when unchanged. */
+/** Fog-of-war view. Delta fields (insights, counters, codex, results, actions) are absent when unchanged. */
 export interface Snapshot {
   type: 'snapshot';
   tick: number;
@@ -46,6 +47,19 @@ export interface Snapshot {
   results?: WaveResult[];
   /** Present once the chapter is won (not a delta field). */
   chapter?: ChapterSummary;
+  /** Crew points left in this shift. */
+  crew: number;
+  /** Latest run of each incident action used; absent when unchanged (delta field). */
+  actions?: ActionRun[];
+}
+
+/** The latest run of an incident action. Windowed effects last until endTick; it may run again at readyTick. */
+export interface ActionRun {
+  id: string;
+  option: string | null;
+  startTick: number;
+  endTick: number;
+  readyTick: number;
 }
 
 export interface WaveResult {
@@ -85,7 +99,20 @@ export interface InstalledCounter {
 /** GET /api/sessions/{id}/catalog: counters this session may see (insight-gated ones only once unlocked). */
 export interface Catalog {
   language: string;
+  crewPerShift: number;
   counters: CatalogItem[];
+  actions: CatalogAction[];
+}
+
+/** An incident action card: costs crew, not credits, and cools down. */
+export interface CatalogAction {
+  id: string;
+  name: string;
+  realTech: string;
+  detail: string;
+  toil: number;
+  cooldownS: number;
+  options: { id: string; name: string; detail: string }[];
 }
 
 /** GET /api/sessions/{id}/codex: the articles this session has opened. */
@@ -107,6 +134,8 @@ export interface CatalogItem {
   realTech: string;
   credits: number;
   upkeepPerWave: number;
+  /** Crew points the purchase takes. */
+  toil: number;
   applyTimeS: number;
   requiresCounters: string[];
   requiresInsight: string | null;
@@ -253,7 +282,7 @@ function catalogOption(v: unknown, path: string): CatalogOption {
 
 function catalogItem(v: unknown, path: string): CatalogItem {
   const o = object(v, path);
-  keys(o, path, ['id', 'name', 'realTech', 'credits', 'upkeepPerWave', 'applyTimeS', 'requiresCounters',
+  keys(o, path, ['id', 'name', 'realTech', 'credits', 'upkeepPerWave', 'toil', 'applyTimeS', 'requiresCounters',
     'requiresInsight', 'grantsInsights', 'tradeoff', 'options']);
   return {
     id: str(o['id'], `${path}.id`),
@@ -261,12 +290,44 @@ function catalogItem(v: unknown, path: string): CatalogItem {
     realTech: str(o['realTech'], `${path}.realTech`),
     credits: num(o['credits'], `${path}.credits`),
     upkeepPerWave: num(o['upkeepPerWave'], `${path}.upkeepPerWave`),
+    toil: num(o['toil'], `${path}.toil`),
     applyTimeS: num(o['applyTimeS'], `${path}.applyTimeS`),
     requiresCounters: strings(o['requiresCounters'], `${path}.requiresCounters`),
     requiresInsight: nullable(o['requiresInsight'], `${path}.requiresInsight`, str),
     grantsInsights: strings(o['grantsInsights'], `${path}.grantsInsights`),
     tradeoff: str(o['tradeoff'], `${path}.tradeoff`),
     options: list(o['options'], `${path}.options`, catalogOption),
+  };
+}
+
+function catalogAction(v: unknown, path: string): CatalogAction {
+  const o = object(v, path);
+  keys(o, path, ['id', 'name', 'realTech', 'detail', 'toil', 'cooldownS', 'options']);
+  return {
+    id: str(o['id'], `${path}.id`),
+    name: str(o['name'], `${path}.name`),
+    realTech: str(o['realTech'], `${path}.realTech`),
+    detail: str(o['detail'], `${path}.detail`),
+    toil: num(o['toil'], `${path}.toil`),
+    cooldownS: num(o['cooldownS'], `${path}.cooldownS`),
+    options: list(o['options'], `${path}.options`, (v2, p2) => {
+      const option = object(v2, p2);
+      keys(option, p2, ['id', 'name', 'detail']);
+      return { id: str(option['id'], `${p2}.id`), name: str(option['name'], `${p2}.name`),
+        detail: str(option['detail'], `${p2}.detail`) };
+    }),
+  };
+}
+
+function actionRun(v: unknown, path: string): ActionRun {
+  const o = object(v, path);
+  keys(o, path, ['id', 'option', 'startTick', 'endTick', 'readyTick']);
+  return {
+    id: str(o['id'], `${path}.id`),
+    option: nullable(o['option'], `${path}.option`, str),
+    startTick: num(o['startTick'], `${path}.startTick`),
+    endTick: num(o['endTick'], `${path}.endTick`),
+    readyTick: num(o['readyTick'], `${path}.readyTick`),
   };
 }
 
@@ -284,8 +345,13 @@ export function parseCodex(v: unknown): Codex {
 
 export function parseCatalog(v: unknown): Catalog {
   const o = object(v, 'catalog');
-  keys(o, 'catalog', ['language', 'counters']);
-  return { language: str(o['language'], 'catalog.language'), counters: list(o['counters'], 'catalog.counters', catalogItem) };
+  keys(o, 'catalog', ['language', 'crewPerShift', 'counters', 'actions']);
+  return {
+    language: str(o['language'], 'catalog.language'),
+    crewPerShift: num(o['crewPerShift'], 'catalog.crewPerShift'),
+    counters: list(o['counters'], 'catalog.counters', catalogItem),
+    actions: list(o['actions'], 'catalog.actions', catalogAction),
+  };
 }
 
 export function parseAction(v: unknown, path = 'action'): ClientAction {
@@ -303,6 +369,12 @@ export function parseAction(v: unknown, path = 'action'): ClientAction {
     case 'answer_postmortem':
       keys(o, path, ['type', 'option']);
       return { type: 'answer_postmortem', option: str(o['option'], `${path}.option`) };
+    case 'run_action': {
+      keys(o, path, ['type', 'action'], ['option']);
+      const action: ClientAction = { type: 'run_action', action: str(o['action'], `${path}.action`) };
+      if (o['option'] !== undefined && o['option'] !== null) action.option = str(o['option'], `${path}.option`);
+      return action;
+    }
     case 'pause':
     case 'resume':
       keys(o, path, ['type']);
@@ -326,7 +398,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       };
     case 'snapshot': {
       keys(o, 'snapshot', ['type', 'tick', 'credits', 'wave', 'phase', 'shield', 'burnRate', 'shieldEmptyInS',
-        'metrics', 'signals'], ['insights', 'counters', 'postmortem', 'codex', 'results', 'chapter']);
+        'metrics', 'signals', 'crew'], ['insights', 'counters', 'postmortem', 'codex', 'results', 'chapter', 'actions']);
       const phase = str(o['phase'], 'snapshot.phase');
       if (!PHASES.includes(phase)) throw new ProtocolError(`snapshot.phase: unknown ${phase}`);
       const s: Snapshot = {
@@ -340,6 +412,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
         shieldEmptyInS: num(o['shieldEmptyInS'], 'snapshot.shieldEmptyInS'),
         metrics: metrics(o['metrics'], 'snapshot.metrics'),
         signals: strings(o['signals'], 'snapshot.signals'),
+        crew: num(o['crew'], 'snapshot.crew'),
       };
       if (o['insights'] !== undefined) s.insights = strings(o['insights'], 'snapshot.insights');
       if (o['counters'] !== undefined) s.counters = list(o['counters'], 'snapshot.counters', installed);
@@ -347,6 +420,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       if (o['codex'] !== undefined) s.codex = strings(o['codex'], 'snapshot.codex');
       if (o['results'] !== undefined) s.results = list(o['results'], 'snapshot.results', waveResult);
       if (o['chapter'] !== undefined) s.chapter = chapterSummary(o['chapter'], 'snapshot.chapter');
+      if (o['actions'] !== undefined) s.actions = list(o['actions'], 'snapshot.actions', actionRun);
       return s;
     }
     case 'rejected':

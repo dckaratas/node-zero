@@ -124,7 +124,7 @@ class ContentLoaderValidationTest {
     void codexEntryNothingLinksToIsReported() {
         edit(CODEX, "codex:\n", "codex:\n  - { id: orphan, title: { en: O, tr: O }, body: { en: O, tr: O } }\n");
 
-        assertThatThrownBy(this::load).hasMessageContaining("codex orphan: not referenced by any threat or counter");
+        assertThatThrownBy(this::load).hasMessageContaining("codex orphan: not referenced by any threat, counter or action");
     }
 
     @Test
