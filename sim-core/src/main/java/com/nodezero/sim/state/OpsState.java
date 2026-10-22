@@ -4,33 +4,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The on-call crew and what its hands-on work left behind (slice 7b, ADR-0018 AF/AG).
+ * The on-call crew and what its hands-on work left behind (slice 7b, ADR-0018 AF/AG), plus its alert
+ * rules (slice 7d, AJ).
  *
  * @param crew crew points left in this shift; actions and counters with toil spend them, a finished wave refills them
  * @param runs latest run of each action that has been used, in first-use order
  * @param orphanedMb disk space held by log files deleted while still open; a restart frees it
  * @param archivesCleared old log archives are gone; deleting them again frees nothing
+ * @param alerts the player's alert rules in creation order
+ * @param alertsCreated rules ever created; the next rule's id is {@code "a" + (alertsCreated + 1)}
  */
-public record OpsState(int crew, List<ActionRun> runs, double orphanedMb, boolean archivesCleared) {
+public record OpsState(int crew, List<ActionRun> runs, double orphanedMb, boolean archivesCleared,
+        List<AlertRule> alerts, int alertsCreated) {
 
     public OpsState {
         runs = List.copyOf(runs);
+        alerts = List.copyOf(alerts);
     }
 
     public static OpsState start(int crew) {
-        return new OpsState(crew, List.of(), 0, false);
+        return new OpsState(crew, List.of(), 0, false, List.of(), 0);
     }
 
     public OpsState withCrew(int newCrew) {
-        return new OpsState(newCrew, runs, orphanedMb, archivesCleared);
+        return new OpsState(newCrew, runs, orphanedMb, archivesCleared, alerts, alertsCreated);
     }
 
     public OpsState withOrphanedMb(double mb) {
-        return new OpsState(crew, runs, mb, archivesCleared);
+        return new OpsState(crew, runs, mb, archivesCleared, alerts, alertsCreated);
     }
 
     public OpsState withArchivesCleared() {
-        return new OpsState(crew, runs, orphanedMb, true);
+        return new OpsState(crew, runs, orphanedMb, true, alerts, alertsCreated);
     }
 
     /** Records a run, replacing the previous run of the same action. */
@@ -48,7 +53,7 @@ public record OpsState(int crew, List<ActionRun> runs, double orphanedMb, boolea
         if (!replaced) {
             next.add(run);
         }
-        return new OpsState(crew, next, orphanedMb, archivesCleared);
+        return new OpsState(crew, next, orphanedMb, archivesCleared, alerts, alertsCreated);
     }
 
     /** @return the latest run of an action, or {@code null} if it never ran */
@@ -59,5 +64,21 @@ public record OpsState(int crew, List<ActionRun> runs, double orphanedMb, boolea
             }
         }
         return null;
+    }
+
+    /** Adds a rule with the next id. */
+    public OpsState withNewAlert(AlertRule rule) {
+        List<AlertRule> next = new ArrayList<>(alerts);
+        next.add(rule);
+        return new OpsState(crew, runs, orphanedMb, archivesCleared, next, alertsCreated + 1);
+    }
+
+    public String nextAlertId() {
+        return "a" + (alertsCreated + 1);
+    }
+
+    /** Replaces the rule list, e.g. after evaluation changed a state or a rule was deleted. */
+    public OpsState withAlerts(List<AlertRule> newAlerts) {
+        return new OpsState(crew, runs, orphanedMb, archivesCleared, newAlerts, alertsCreated);
     }
 }

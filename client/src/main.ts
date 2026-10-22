@@ -2,9 +2,12 @@ import './style.css';
 import { loadLanguage, saveLanguage, type ContentLanguage } from './game/language';
 import { Orders } from './game/orders';
 import { Review } from './game/postmortem';
+import { firingNodes } from './game/alerts';
 import { shieldAlert } from './game/shield';
 import { GameStore } from './game/store';
 import { ActionPanel } from './hud/actionPanel';
+import { AlertBanner } from './hud/alertBanner';
+import { AlertPanel } from './hud/alertPanel';
 import { ChapterDialog } from './hud/chapterDialog';
 import { CodexPanel } from './hud/codexPanel';
 import { CounterPanel } from './hud/counterPanel';
@@ -50,6 +53,7 @@ const connection = new Connection(Connection.defaultUrl(), {
         review.reset();
         panel.reset();
         actionPanel.reset();
+        alertBanner.reset();
         codexPanel.reset();
         catalog.load(session, language);
         hud.setPaused(false);
@@ -128,16 +132,20 @@ const codex = new SessionResource('codex', parseCodex, (c) => codexPanel.show(c)
 const postmortem = new PostmortemDialog(review, texts, (wave, option) => {
   if (send({ type: 'answer_postmortem', option })) review.sent(wave, option);
 });
+const alertPanel = new AlertPanel(hud.alertsHost, send);
+const alertBanner = new AlertBanner();
 const shieldAlerts = new ShieldAlerts(() => document.querySelector<HTMLElement>('.hud .shield'));
 const chapter = new ChapterDialog();
 
 map.ticker.add((ticker) => {
   const now = performance.now();
   const view = store.sample(now);
-  map.render(view, ticker.deltaMS);
+  map.render(view, ticker.deltaMS, firingNodes(store.current()?.alerts ?? []));
   hud.render(view, view === undefined || !orders.hasPending() ? undefined : orders.projectedCredits(view));
   panel.render(store.current());
   actionPanel.render(store.current());
+  alertPanel.render(store.current());
+  alertBanner.render(store.current()?.alerts ?? []);
   const latest = store.current();
   // The collapse notice comes first; the summary waits until the last postmortem is closed.
   postmortem.render(shieldAlerts.blocking(now) ? null : latest?.postmortem ?? null);

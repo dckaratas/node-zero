@@ -39,5 +39,14 @@
   "codex" : [ "prometheus", "use-method", "dashboards", "traffic-heatmap" ],
   "results" : [ ],
   "crew" : 8,
-  "actions" : [ ]
+  "actions" : [ ],
+  "alerts" : [ {
+    "id" : "a1",
+    "metric" : "cpu_utilization",
+    "op" : "ABOVE",
+    "threshold" : 0.85,
+    "forS" : 10.0,
+    "pendingSinceTick" : -1,
+    "firingSinceTick" : -1
+  } ]
 }

@@ -70,5 +70,6 @@
     "postmortems" : 4
   },
   "crew" : 8,
-  "actions" : [ ]
+  "actions" : [ ],
+  "alerts" : [ ]
 }

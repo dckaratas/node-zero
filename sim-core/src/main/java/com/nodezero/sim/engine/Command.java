@@ -1,5 +1,6 @@
 package com.nodezero.sim.engine;
 
+import com.nodezero.sim.state.AlertRule;
 import com.nodezero.sim.state.ResourceId;
 import java.util.Objects;
 
@@ -62,6 +63,23 @@ public sealed interface Command {
 
         public ConfigureCounter {
             Objects.requireNonNull(counterId, "counterId");
+        }
+    }
+
+    /** Game: adds an alert rule {@code metric op threshold for forS} (slice 7d). */
+    record SetAlertRule(String metric, AlertRule.Comparison op, double threshold, double forS) implements Command {
+
+        public SetAlertRule {
+            Objects.requireNonNull(metric, "metric");
+            Objects.requireNonNull(op, "op");
+        }
+    }
+
+    /** Game: deletes an alert rule (slice 7d). */
+    record RemoveAlertRule(String ruleId) implements Command {
+
+        public RemoveAlertRule {
+            Objects.requireNonNull(ruleId, "ruleId");
         }
     }
 

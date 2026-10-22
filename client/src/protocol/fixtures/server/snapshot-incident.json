@@ -26,5 +26,6 @@
     "startTick" : 30,
     "endTick" : 330,
     "readyTick" : 330
-  } ]
+  } ],
+  "alerts" : [ ]
 }

@@ -3,6 +3,7 @@ package com.nodezero.server.protocol;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.nodezero.sim.engine.Command;
+import com.nodezero.sim.state.AlertRule;
 
 /**
  * Messages a client may send, as JSON with a {@code type} field (decision M), e.g.
@@ -17,6 +18,8 @@ import com.nodezero.sim.engine.Command;
     @JsonSubTypes.Type(value = ClientMessage.RunAction.class, name = "run_action"),
     @JsonSubTypes.Type(value = ClientMessage.RemoveCounter.class, name = "remove_counter"),
     @JsonSubTypes.Type(value = ClientMessage.ConfigureCounter.class, name = "configure_counter"),
+    @JsonSubTypes.Type(value = ClientMessage.SetAlert.class, name = "set_alert"),
+    @JsonSubTypes.Type(value = ClientMessage.RemoveAlert.class, name = "remove_alert"),
     @JsonSubTypes.Type(value = ClientMessage.Pause.class, name = "pause"),
     @JsonSubTypes.Type(value = ClientMessage.Resume.class, name = "resume")
 })
@@ -38,6 +41,12 @@ public sealed interface ClientMessage {
     /** New value for the setting that drives a counter's effect (slice 7c). */
     record ConfigureCounter(String counter, double value) implements ClientMessage {}
 
+    /** A new alert rule {@code metric op threshold for forS} (slice 7d). */
+    record SetAlert(String metric, AlertRule.Comparison op, double threshold, double forS)
+            implements ClientMessage {}
+
+    record RemoveAlert(String rule) implements ClientMessage {}
+
     record Pause() implements ClientMessage {}
 
     record Resume() implements ClientMessage {}
@@ -51,6 +60,8 @@ public sealed interface ClientMessage {
             case RunAction m -> new Command.RunAction(m.action(), m.option());
             case RemoveCounter m -> new Command.RemoveCounter(m.counter());
             case ConfigureCounter m -> new Command.ConfigureCounter(m.counter(), m.value());
+            case SetAlert m -> new Command.SetAlertRule(m.metric(), m.op(), m.threshold(), m.forS());
+            case RemoveAlert m -> new Command.RemoveAlertRule(m.rule());
             case Pause m -> null;
             case Resume m -> null;
         };
@@ -65,6 +76,8 @@ public sealed interface ClientMessage {
             case Command.RunAction c -> new RunAction(c.actionId(), c.optionId());
             case Command.RemoveCounter c -> new RemoveCounter(c.counterId());
             case Command.ConfigureCounter c -> new ConfigureCounter(c.counterId(), c.value());
+            case Command.SetAlertRule c -> new SetAlert(c.metric(), c.op(), c.threshold(), c.forS());
+            case Command.RemoveAlertRule c -> new RemoveAlert(c.ruleId());
             case Command.Noop c -> throw notAPlayerAction(c);
             case Command.SetArrivalRate c -> throw notAPlayerAction(c);
             case Command.SetHoldTime c -> throw notAPlayerAction(c);

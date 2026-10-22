@@ -53,6 +53,8 @@ public final class Simulation {
                 case Command.RunAction c -> throw gameCommand(c);
                 case Command.RemoveCounter c -> throw gameCommand(c);
                 case Command.ConfigureCounter c -> throw gameCommand(c);
+                case Command.SetAlertRule c -> throw gameCommand(c);
+                case Command.RemoveAlertRule c -> throw gameCommand(c);
                 case Command.UnlockInsight c -> throw gameCommand(c);
             }
         }

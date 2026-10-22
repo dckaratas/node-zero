@@ -4,6 +4,8 @@
 
 export type Phase = 'PREPARATION' | 'RUNNING' | 'COMPLETE' | 'FAILED';
 
+export type AlertOp = 'ABOVE' | 'BELOW';
+
 export type ClientAction =
   | { type: 'start_wave'; wave: number }
   | { type: 'apply_counter'; counter: string; option?: string }
@@ -11,6 +13,8 @@ export type ClientAction =
   | { type: 'run_action'; action: string; option?: string }
   | { type: 'remove_counter'; counter: string }
   | { type: 'configure_counter'; counter: string; value: number }
+  | { type: 'set_alert'; metric: string; op: AlertOp; threshold: number; forS: number }
+  | { type: 'remove_alert'; rule: string }
   | { type: 'pause' }
   | { type: 'resume' };
 
@@ -23,7 +27,7 @@ export interface Welcome {
   snapshotHz: number;
 }
 
-/** Fog-of-war view. Delta fields (insights, counters, codex, results, actions) are absent when unchanged. */
+/** Fog-of-war view. Delta fields (insights, counters, codex, results, actions, alerts) are absent when unchanged. */
 export interface Snapshot {
   type: 'snapshot';
   tick: number;
@@ -53,6 +57,19 @@ export interface Snapshot {
   crew: number;
   /** Latest run of each incident action used; absent when unchanged (delta field). */
   actions?: ActionRun[];
+  /** The player's alert rules with their state; absent when unchanged (delta field). */
+  alerts?: AlertRule[];
+}
+
+/** An alert rule: pending while `metric op threshold` holds, firing once it has held for forS. */
+export interface AlertRule {
+  id: string;
+  metric: string;
+  op: AlertOp;
+  threshold: number;
+  forS: number;
+  pendingSinceTick: number;
+  firingSinceTick: number;
 }
 
 /** The latest run of an incident action. Windowed effects last until endTick; it may run again at readyTick. */
@@ -346,6 +363,25 @@ function catalogAction(v: unknown, path: string): CatalogAction {
   };
 }
 
+function alertOp(v: unknown, path: string): AlertOp {
+  if (v !== 'ABOVE' && v !== 'BELOW') throw new ProtocolError(`${path}: expected ABOVE or BELOW`);
+  return v;
+}
+
+function alertRule(v: unknown, path: string): AlertRule {
+  const o = object(v, path);
+  keys(o, path, ['id', 'metric', 'op', 'threshold', 'forS', 'pendingSinceTick', 'firingSinceTick']);
+  return {
+    id: str(o['id'], `${path}.id`),
+    metric: str(o['metric'], `${path}.metric`),
+    op: alertOp(o['op'], `${path}.op`),
+    threshold: num(o['threshold'], `${path}.threshold`),
+    forS: num(o['forS'], `${path}.forS`),
+    pendingSinceTick: num(o['pendingSinceTick'], `${path}.pendingSinceTick`),
+    firingSinceTick: num(o['firingSinceTick'], `${path}.firingSinceTick`),
+  };
+}
+
 function actionRun(v: unknown, path: string): ActionRun {
   const o = object(v, path);
   keys(o, path, ['id', 'option', 'startTick', 'endTick', 'readyTick']);
@@ -396,6 +432,13 @@ export function parseAction(v: unknown, path = 'action'): ClientAction {
     case 'answer_postmortem':
       keys(o, path, ['type', 'option']);
       return { type: 'answer_postmortem', option: str(o['option'], `${path}.option`) };
+    case 'set_alert':
+      keys(o, path, ['type', 'metric', 'op', 'threshold', 'forS']);
+      return { type: 'set_alert', metric: str(o['metric'], `${path}.metric`), op: alertOp(o['op'], `${path}.op`),
+        threshold: num(o['threshold'], `${path}.threshold`), forS: num(o['forS'], `${path}.forS`) };
+    case 'remove_alert':
+      keys(o, path, ['type', 'rule']);
+      return { type: 'remove_alert', rule: str(o['rule'], `${path}.rule`) };
     case 'remove_counter':
       keys(o, path, ['type', 'counter']);
       return { type: 'remove_counter', counter: str(o['counter'], `${path}.counter`) };
@@ -432,7 +475,8 @@ export function parseServerMessage(v: unknown): ServerMessage {
       };
     case 'snapshot': {
       keys(o, 'snapshot', ['type', 'tick', 'credits', 'wave', 'phase', 'shield', 'burnRate', 'shieldEmptyInS',
-        'metrics', 'signals', 'crew'], ['insights', 'counters', 'postmortem', 'codex', 'results', 'chapter', 'actions']);
+        'metrics', 'signals', 'crew'], ['insights', 'counters', 'postmortem', 'codex', 'results', 'chapter', 'actions',
+        'alerts']);
       const phase = str(o['phase'], 'snapshot.phase');
       if (!PHASES.includes(phase)) throw new ProtocolError(`snapshot.phase: unknown ${phase}`);
       const s: Snapshot = {
@@ -455,6 +499,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       if (o['results'] !== undefined) s.results = list(o['results'], 'snapshot.results', waveResult);
       if (o['chapter'] !== undefined) s.chapter = chapterSummary(o['chapter'], 'snapshot.chapter');
       if (o['actions'] !== undefined) s.actions = list(o['actions'], 'snapshot.actions', actionRun);
+      if (o['alerts'] !== undefined) s.alerts = list(o['alerts'], 'snapshot.alerts', alertRule);
       return s;
     }
     case 'rejected':

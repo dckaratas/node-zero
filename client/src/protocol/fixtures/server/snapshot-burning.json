@@ -14,5 +14,6 @@
   "codex" : [ ],
   "results" : [ ],
   "crew" : 8,
-  "actions" : [ ]
+  "actions" : [ ],
+  "alerts" : [ ]
 }

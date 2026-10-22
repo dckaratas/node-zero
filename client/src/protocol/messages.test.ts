@@ -56,6 +56,11 @@ describe('server → client contract', () => {
     expect(pm?.correct).toBeNull();
   });
 
+  it('sends alert rules with their state', () => {
+    const s = parseServerMessage(fixture('snapshot-keyframe'));
+    expect(s.type === 'snapshot' && s.alerts?.map((a) => [a.id, a.op, a.firingSinceTick])).toEqual([['a1', 'ABOVE', -1]]);
+  });
+
   it('sends the crew and the incident actions it ran', () => {
     const s = parseServerMessage(fixture('snapshot-incident'));
     if (s.type !== 'snapshot') throw new Error('expected a snapshot');
@@ -108,6 +113,8 @@ describe('client → server contract', () => {
     'run-action': { type: 'run_action', action: 'clear-disk', option: 'truncate' },
     'remove-counter': { type: 'remove_counter', counter: 'prometheus' },
     'configure-counter': { type: 'configure_counter', counter: 'nginx-rate-limit', value: 300 },
+    'set-alert': { type: 'set_alert', metric: 'cpu_utilization', op: 'ABOVE', threshold: 0.85, forS: 10 },
+    'remove-alert': { type: 'remove_alert', rule: 'a1' },
     pause: { type: 'pause' },
     resume: { type: 'resume' },
   };

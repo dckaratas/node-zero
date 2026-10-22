@@ -12,7 +12,7 @@ import java.util.List;
  * Immutable and thread-safe; one instance can serve every session that uses the same rules.
  *
  * <p>Order within a tick: game commands (incl. incident actions) → resource commands → counters becoming active →
- * request pipeline → models advance → error budget and wave bookkeeping.
+ * request pipeline → models advance → error budget and wave bookkeeping → alert rules.
  */
 public final class Game {
 
@@ -21,6 +21,7 @@ public final class Game {
     private final Waves waves;
     private final Counters counters;
     private final Actions actions;
+    private final Alerts alerts;
     private final Observer observer;
 
     public Game(Rules rules) {
@@ -29,6 +30,7 @@ public final class Game {
         this.waves = new Waves(rules);
         this.counters = new Counters(rules);
         this.actions = new Actions(rules);
+        this.alerts = new Alerts(rules);
         this.observer = new Observer(rules);
     }
 
@@ -64,6 +66,8 @@ public final class Game {
                 case Command.RunAction run -> s = actions.run(s, run, tick);
                 case Command.RemoveCounter remove -> s = counters.remove(s, remove, tick);
                 case Command.ConfigureCounter configure -> s = counters.configure(s, configure, tick);
+                case Command.SetAlertRule set -> s = alerts.set(s, set, tick);
+                case Command.RemoveAlertRule remove -> s = alerts.remove(s, remove);
                 case Command.UnlockInsight unlock -> s = s.withProgress(s.progress().withInsight(unlock.insightId()));
                 case Command.Noop noop -> { }
                 case Command.SetArrivalRate c -> resourceCommands = append(resourceCommands, c);
@@ -74,7 +78,7 @@ public final class Game {
         s = counters.activate(s, tick);
         Plan plan = pipeline.plan(s, tick);
         s = Simulation.advance(s, plan.demands(), tick);
-        return waves.account(s, plan, tick);
+        return alerts.evaluate(waves.account(s, plan, tick), tick);
     }
 
     /** The player's view of {@code state}: only what their monitoring can see (fog of war). */

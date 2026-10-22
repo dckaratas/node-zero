@@ -1,4 +1,4 @@
-import type { ActionRun, ChapterSummary, InstalledCounter, Phase, Postmortem, Snapshot, WaveResult } from '../protocol/messages';
+import type { ActionRun, AlertRule, ChapterSummary, InstalledCounter, Phase, Postmortem, Snapshot, WaveResult } from '../protocol/messages';
 
 /** A complete view: snapshot deltas merged onto what the client already knows. */
 export interface View {
@@ -19,6 +19,7 @@ export interface View {
   chapter: ChapterSummary | null;
   crew: number;
   actions: readonly ActionRun[];
+  alerts: readonly AlertRule[];
 }
 
 /**
@@ -65,6 +66,7 @@ export class GameStore {
       chapter: s.chapter ?? null,
       crew: s.crew,
       actions: s.actions ?? base?.actions ?? [],
+      alerts: s.alerts ?? base?.alerts ?? [],
     };
     this.previous = base ?? view;
     this.latest = view;

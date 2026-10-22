@@ -1,6 +1,6 @@
 # ADR-0018: Olay anı oynanışı (Dilim 7)
 
-- **Durum:** Kabul edildi; 7a, 7b ve 7c uygulandı (7d alarm sırada)
+- **Durum:** Kabul edildi, uygulandı (7a kalkan + bölüm sonu, 7b müdahale + mürettebat, 7c kaldırma + ayar, 7d alarm)
 - **Tarih:** 2026-10-22
 
 ## Bağlam
@@ -112,3 +112,18 @@ M/M/c kuyruğunda Erlang-C de aynı üstel sönümü verir. Amaç (kademeli pay,
 - İstemci: kurulu kartta "Remove" (ikinci tıkta onay: "no refund") ve ayar alanı + "Apply (1 crew)"; kaldırılırken
   "Removing… N s". Protokol: `remove_counter`, `configure_counter`; snapshot sayaçlarında `removedTick`, `setting`;
   katalogda `removable`, `setting {key, value, min, max}`.
+
+## Ek (Dilim 7d, 2026-10-22): alarm kuralları
+- Kural = `metrik ABOVE|BELOW eşik for N sn` (Prometheus alerting rule biçimi); `OpsState.alerts`, kimlikler `a1, a2…`.
+  Komutlar `SetAlertRule`, `RemoveAlertRule` → replay'e girer. En fazla 5 kural (alarm yorgunluğu), `for` 0–600 sn.
+- Değerlendirme sunucuda, her tick'te modeller ilerledikten sonra (`Alerts.evaluate`, `Game.step` sonu): koşul tutunca
+  **pending**, `for` süresi dolunca **firing**, koşul bozulunca hemen çözülür. Durum sadece geçişte değişir (ayırma yok);
+  kural yoksa maliyet sıfır. Benchmark değişmedi.
+- Görünürlük: kural sadece o an ölçülebilen metriğe kurulabilir (`Monitoring`, Observer ile ortak). İzleme sonradan
+  kaldırılırsa kural **veri yok** durumuna düşer ve ateşlenmez; gerçek Prometheus'taki `absent()` dersini taşır.
+- **Duraklatma yok** (AJ). İstemci: başlığın altında akışta kırmızı nabızlı banner ("FIRING cpu_utilization > 0.85 for 3 s"
+  + Ack), sekme başlığında 🔴, ilgili harita düğümünün çerçevesi kırmızı atar. **Ack istemcide**: bir ateşlemeyi susturur,
+  aynı kuralın sonraki ateşlemesi (yeni `firingSinceTick`) yine yüksek sesle gelir. Panelde "Alerts" listesi ve form
+  (sadece görünen metrikler).
+- Yan düzeltme: HUD'da çok küçük yakma hızı (×0,04, "empty in 41192 s") gizlendi (eşik ×0,1).
+- Protokol: snapshot'ta `alerts` (delta); istemci mesajları `set_alert {metric, op, threshold, forS}`, `remove_alert {rule}`.

@@ -2,7 +2,6 @@ package com.nodezero.sim.engine;
 
 import com.nodezero.sim.content.ThreatDef;
 import com.nodezero.sim.state.GameState;
-import com.nodezero.sim.state.InstalledCounter;
 import com.nodezero.sim.state.PostmortemState;
 import com.nodezero.sim.state.Progress;
 import com.nodezero.sim.state.WaveState;
@@ -30,7 +29,7 @@ final class Observer {
     Observation observe(GameState s) {
         Progress p = s.progress();
         WaveState wave = p.wave();
-        Modules modules = modules(p, s.tick());
+        Monitoring modules = Monitoring.at(rules, p, s.tick());
 
         Map<String, Double> metrics = new LinkedHashMap<>();
         for (Metric metric : Metric.values()) {
@@ -69,7 +68,7 @@ final class Observer {
                 p.postmortem());
         return new Observation(s.tick(), p.credits(), wave.number(), wave.phase(), shield, burnRate, emptyInS,
                 metrics, signals, p.insights(), counters, postmortem(p), p.codex(), p.results(), chapter,
-                p.ops().crew(), p.ops().runs());
+                p.ops().crew(), p.ops().runs(), p.ops().alerts());
     }
 
     private Observation.Postmortem postmortem(Progress p) {
@@ -88,33 +87,5 @@ final class Observer {
         }
         return new Observation.Postmortem(pm.wave(), def.questionKey(), options, pm.chosenOption(),
                 pm.answered() ? correct : null);
-    }
-
-    private Modules modules(Progress p, long tick) {
-        boolean prometheus = false;
-        boolean exporter = false;
-        boolean grafana = false;
-        for (InstalledCounter installed : p.counters()) {
-            if (!installed.isActive(tick)) {
-                continue;
-            }
-            for (Rules.Effect e : rules.counter(installed.id()).variant(installed.option()).effects()) {
-                switch (e.kind()) {
-                    case ENABLE_PROMETHEUS -> prometheus = true;
-                    case ENABLE_POSTGRES_EXPORTER -> exporter = true;
-                    case ENABLE_GRAFANA -> grafana = true;
-                    default -> { }
-                }
-            }
-        }
-        return new Modules(prometheus, exporter, grafana);
-    }
-
-    private record Modules(boolean prometheus, boolean exporter, boolean grafana) {
-        boolean allow(Metric.Tier tier) {
-            return (!tier.needsPrometheus || prometheus)
-                    && (!tier.needsExporter || exporter)
-                    && (!tier.needsGrafana || grafana);
-        }
     }
 }

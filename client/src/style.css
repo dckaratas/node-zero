@@ -218,3 +218,19 @@ dialog.chapter ul { padding-left: 0; list-style: none; color: var(--muted); }
 .card button.remove { margin-left: 6px; background: transparent; border-color: var(--line); color: var(--muted); }
 .card button.remove[data-armed] { border-color: var(--bad); color: var(--bad); }
 .card[data-state='removing'] { opacity: 0.7; }
+
+/* Alert rules and the firing banner (slice 7d) */
+.alert-rules { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.alert-rules li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.alert-rules .state { min-width: 4.5em; font-size: 0.75rem; text-transform: uppercase; color: var(--muted); }
+.alert-rules li[data-status="pending"] .state { color: var(--warn); }
+.alert-rules li[data-status="firing"] .state { color: var(--bad); font-weight: 700; }
+.alert-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.85rem; }
+.alert-form select, .alert-form input { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; }
+.alert-form input[type="number"] { width: 6em; }
+.alert-form[hidden], .alerts-host .hint[hidden] { display: none; }
+.alert-banner { display: flex; flex-direction: column; gap: 4px; padding: 8px 16px; background: #8b1a22; color: #fff; box-shadow: 0 2px 12px rgb(0 0 0 / 0.5); animation: banner-pulse 1.2s ease-in-out infinite; }
+.alert-banner div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.alert-banner strong { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+.alert-banner[hidden] { display: none; }
+@keyframes banner-pulse { 50% { background: #b3232d; } }

@@ -38,9 +38,12 @@ export function shieldAlert(before: ShieldState | undefined, after: ShieldState)
   return null;
 }
 
-/** "burn ×14 · empty in 40 s", or an empty string when the shield is not burning. */
+/** Below this the budget would outlast the day many times over: not worth a line in the header. */
+const NEGLIGIBLE_BURN = 0.1;
+
+/** "burn ×14 · empty in 40 s", or an empty string when the shield is not (noticeably) burning. */
 export function burnText(burnRate: number, emptyInS: number): string {
-  if (burnRate <= 0) return '';
+  if (burnRate < NEGLIGIBLE_BURN) return '';
   const rate = burnRate >= 10 ? burnRate.toFixed(0) : burnRate.toFixed(1);
   return emptyInS >= 0 ? `burn ×${rate} · empty in ${Math.ceil(emptyInS)} s` : `burn ×${rate}`;
 }

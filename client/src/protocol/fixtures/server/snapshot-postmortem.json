@@ -39,5 +39,6 @@
     "postmortemRight" : null
   } ],
   "crew" : 8,
-  "actions" : [ ]
+  "actions" : [ ],
+  "alerts" : [ ]
 }

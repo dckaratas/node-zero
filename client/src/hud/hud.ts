@@ -27,6 +27,8 @@ export class Hud {
   private readonly signals = el('ul', 'signals');
   /** Where the counter cards go (CounterPanel). */
   readonly countersHost = el('section', 'counters');
+  /** Where the alert rules go (AlertPanel). */
+  readonly alertsHost = el('section', 'alerts-host');
   /** Where the incident action cards go (ActionPanel). */
   readonly actionsHost = el('section', 'actions-host');
   /** Where the codex goes (CodexPanel); it brings its own heading. */
@@ -49,8 +51,8 @@ export class Hud {
     top.append(this.wave, this.phase, this.clock, this.shield, this.burn, this.crew, this.credits, this.startWave, this.pause, this.status,
       this.language);
     // Codex above the long module list: closed articles are one line each.
-    panel.append(heading('Signals'), this.signals, this.notice, heading('Incident response'), this.actionsHost,
-      this.codexHost, heading('Modules'), this.countersHost,
+    panel.append(heading('Signals'), this.signals, this.notice, heading('Alerts'), this.alertsHost,
+      heading('Incident response'), this.actionsHost, this.codexHost, heading('Modules'), this.countersHost,
       heading('Metrics'), this.metrics);
 
     this.startWave.onclick = () => send({ type: 'start_wave', wave: this.nextWave });

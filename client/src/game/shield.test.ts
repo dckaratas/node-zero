@@ -28,6 +28,7 @@ describe('shield', () => {
 
   it('says how fast it burns and when it breaks', () => {
     expect(burnText(0, -1)).toBe('');
+    expect(burnText(0.04, 41192)).toBe(''); // a trickle, not news
     expect(burnText(80.8, 1.38)).toBe('burn ×81 · empty in 2 s');
     expect(burnText(2.345, 39.2)).toBe('burn ×2.3 · empty in 40 s');
   });

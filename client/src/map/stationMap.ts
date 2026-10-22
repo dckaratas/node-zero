@@ -27,6 +27,7 @@ export class StationMap {
   private readonly flow = new Graphics();
   private readonly sprites: NodeSprite[] = [];
   private flowPhase = 0;
+  private alertPhase = 0;
 
   async mount(host: HTMLElement): Promise<void> {
     await this.app.init({ resizeTo: host, background: 0x0b1020, antialias: true, autoDensity: true,
@@ -54,14 +55,22 @@ export class StationMap {
     new ResizeObserver(() => this.app.resize()).observe(host);
   }
 
-  /** Called every frame with the interpolated view. */
-  render(view: View | undefined, deltaMs: number): void {
+  /**
+   * Called every frame with the interpolated view.
+   * @param alerting nodes with a firing alert rule (slice 7d): their outline pulses red
+   */
+  render(view: View | undefined, deltaMs: number, alerting: ReadonlySet<string> = new Set()): void {
     const metrics = view?.metrics ?? {};
+    this.alertPhase = (this.alertPhase + deltaMs / 600) % (2 * Math.PI);
+    const pulse = 0.55 + 0.45 * Math.sin(this.alertPhase);
     for (const s of this.sprites) {
       const load = s.node.load(metrics);
+      const outline = alerting.has(s.node.id)
+        ? { width: 5, color: 0xff4d4f, alpha: pulse }
+        : { width: 2, color: 0x8fa3d9, alpha: 0.6 };
       s.hex.clear()
         .poly(hexCorners(s.centre, DRAWN_SIZE)).fill({ color: loadColor(load) })
-        .stroke({ width: 2, color: 0x8fa3d9, alpha: 0.6 });
+        .stroke(outline);
       s.value.text = load === undefined ? (s.node.id === 'gateway' ? '' : '?') : `${Math.round(load * 100)}%`;
     }
     this.drawFlow(metrics['request_rate'], deltaMs);

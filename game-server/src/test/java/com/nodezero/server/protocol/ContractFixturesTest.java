@@ -7,6 +7,7 @@ import com.nodezero.sim.engine.Command;
 import com.nodezero.sim.engine.Game;
 import com.nodezero.sim.engine.GameBalance;
 import com.nodezero.sim.engine.Observation;
+import com.nodezero.sim.state.AlertRule;
 import com.nodezero.sim.state.GameState;
 import com.nodezero.sim.state.WaveState;
 import java.io.IOException;
@@ -42,7 +43,12 @@ class ContractFixturesTest {
         s = game.step(s, List.of(new Command.ApplyCounter("prometheus")), 1);
         s = game.step(s, List.of(new Command.ApplyCounter("grafana")), 2);
         for (long tick = 3; tick <= 300; tick++) {
-            s = game.step(s, tick == 100 ? List.of(new Command.StartWave(1)) : List.of(), tick);
+            List<Command> commands = switch ((int) tick) {
+                case 80 -> List.of(new Command.SetAlertRule("cpu_utilization", AlertRule.Comparison.ABOVE, 0.85, 10));
+                case 100 -> List.of(new Command.StartWave(1));
+                default -> List.of();
+            };
+            s = game.step(s, commands, tick);
         }
         SnapshotStream stream = new SnapshotStream(10);
         ServerMessage.Snapshot keyframe = stream.next(game.observe(s));
@@ -121,7 +127,7 @@ class ContractFixturesTest {
         }
     }
 
-    /** A sample of the catalog body: plain, gated by a counter, not removable, with a setting, with options; one action. */
+    /** Catalog sample: plain, gated by a counter, not removable, with a setting, with options; one action. */
     @Test
     void catalogMatchesTheClientFixture() throws IOException {
         CounterCatalog.Catalog full = new CounterCatalog(Game.chapterOne().rules())
@@ -181,6 +187,9 @@ class ContractFixturesTest {
         expected.put("run-action", new ClientMessage.RunAction("clear-disk", "truncate"));
         expected.put("remove-counter", new ClientMessage.RemoveCounter("prometheus"));
         expected.put("configure-counter", new ClientMessage.ConfigureCounter("nginx-rate-limit", 300));
+        expected.put("set-alert",
+                new ClientMessage.SetAlert("cpu_utilization", AlertRule.Comparison.ABOVE, 0.85, 10));
+        expected.put("remove-alert", new ClientMessage.RemoveAlert("a1"));
 
         for (Map.Entry<String, ClientMessage> e : expected.entrySet()) {
             Path file = FIXTURES.resolve("client").resolve(e.getKey() + ".json");
