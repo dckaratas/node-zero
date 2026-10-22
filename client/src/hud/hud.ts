@@ -21,6 +21,8 @@ export class Hud {
   private readonly signals = el('ul', 'signals');
   /** Where the counter cards go (CounterPanel). */
   readonly countersHost = el('section', 'counters');
+  /** Where the codex goes (CodexPanel); it brings its own heading. */
+  readonly codexHost = el('section', 'codex-host');
   private paused = false;
   private nextWave = 1;
 
@@ -31,7 +33,8 @@ export class Hud {
     this.shield.setAttribute('aria-valuemax', '100');
     this.shield.append(this.shieldBar);
     top.append(this.wave, this.phase, this.clock, this.shield, this.credits, this.startWave, this.pause, this.status);
-    panel.append(heading('Signals'), this.signals, this.notice, heading('Modules'), this.countersHost,
+    // Codex above the long module list: closed articles are one line each.
+    panel.append(heading('Signals'), this.signals, this.notice, this.codexHost, heading('Modules'), this.countersHost,
       heading('Metrics'), this.metrics);
 
     this.startWave.onclick = () => send({ type: 'start_wave', wave: this.nextWave });

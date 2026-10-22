@@ -170,6 +170,25 @@ class GameServerTest {
     }
 
     @Test
+    void codexServesOnlyWhatTheSessionOpened() throws Exception {
+        connect();
+        String session = await(type("welcome")).path("session").asString();
+        HttpClient http = HttpClient.newHttpClient();
+        URI uri = URI.create("http://localhost:" + port + "/api/sessions/" + session + "/codex?lang=tr");
+
+        JsonNode before = json.readTree(http.send(HttpRequest.newBuilder(uri).build(),
+                HttpResponse.BodyHandlers.ofString()).body());
+        send("{\"type\":\"apply_counter\",\"counter\":\"prometheus\"}");
+        await(m -> type("snapshot").test(m) && m.path("codex").toString().contains("use-method"));
+        JsonNode after = json.readTree(http.send(HttpRequest.newBuilder(uri).build(),
+                HttpResponse.BodyHandlers.ofString()).body());
+
+        assertThat(before.path("entries")).isEmpty();
+        assertThat(after.path("entries").get(1).path("id").asString()).isEqualTo("use-method");
+        assertThat(after.path("entries").get(1).path("title").asString()).isEqualTo("USE yöntemi");
+    }
+
+    @Test
     void replayLogAndMetricsAreServedOverHttp() throws Exception {
         connect();
         String session = await(type("welcome")).path("session").asString();

@@ -124,7 +124,9 @@ final class Waves {
             throw new IllegalArgumentException("unknown postmortem option: " + optionId);
         }
         int bonus = chosen.correct() ? rules.balance().postmortemBonus() : 0;
-        return s.withProgress(p.withPostmortem(pm.answer(optionId)).withCredits(p.credits() + bonus));
+        // The threat's codex entries open now, not when it arrives: they would give the answer away.
+        return s.withProgress(p.withPostmortem(pm.answer(optionId)).withCredits(p.credits() + bonus)
+                .withCodex(rules.content().threat(pm.threatId()).codex()));
     }
 
     /** A threat wave that just ended opens its postmortem, unless that threat was already reviewed. */

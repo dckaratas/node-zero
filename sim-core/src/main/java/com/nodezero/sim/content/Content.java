@@ -4,12 +4,17 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** All validated game content, keyed by id in index order. */
-public record Content(Map<String, ThreatDef> threats, Map<String, CounterDef> counters, Messages messages) {
+/** All validated game content, keyed by id in index order (codex in file order). */
+public record Content(
+        Map<String, ThreatDef> threats,
+        Map<String, CounterDef> counters,
+        Map<String, CodexEntry> codex,
+        Messages messages) {
 
     public Content {
         threats = Collections.unmodifiableMap(new LinkedHashMap<>(threats));
         counters = Collections.unmodifiableMap(new LinkedHashMap<>(counters));
+        codex = Collections.unmodifiableMap(new LinkedHashMap<>(codex));
     }
 
     public ThreatDef threat(String id) {

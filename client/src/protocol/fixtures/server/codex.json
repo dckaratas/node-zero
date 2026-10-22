@@ -1,0 +1,12 @@
+{
+  "language" : "en",
+  "entries" : [ {
+    "id" : "prometheus",
+    "title" : "Prometheus and Micrometer",
+    "body" : "Prometheus pulls metrics: every few seconds it scrapes an HTTP endpoint such as Spring Boot's /actuator/prometheus, where Micrometer exposes counters, gauges and histograms.\n\nCounters only go up, so you query their rate: rate(http_server_requests_seconds_count[5m]) is requests per second. Gauges are current values, like busy Tomcat threads or active Hikari connections. Without metrics you learn about problems from your users, late and vaguely."
+  }, {
+    "id" : "use-method",
+    "title" : "The USE method",
+    "body" : "Brendan Gregg's checklist for finding a bottleneck: for every resource, check Utilization (how busy it is), Saturation (how much work is waiting) and Errors.\n\nWalk the request path: CPU, thread pool, connection pool, database CPU and I/O, disk. The first resource that is saturated is usually the bottleneck; the ones behind it look idle because work cannot reach them. A low CPU next to a full connection pool points at the database, not at the code."
+  } ]
+}

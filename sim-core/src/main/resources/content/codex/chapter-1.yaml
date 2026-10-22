@@ -1,0 +1,284 @@
+# Chapter 1 codex (ADR-0008, ADR-0017). Plain text; a blank line starts a new paragraph.
+# Every entry must be referenced by a threat or counter, and every reference must exist here.
+codex:
+  # --- queues and models ---
+  - id: utilization-law
+    title: { en: "Utilization law", tr: "Kullanım yasası" }
+    body:
+      en: |-
+        Utilization is throughput times service time: U = X × S. NODE-01's reactor has 4 cores, each serving a request in 20 ms, so 170 requests per second keep it 170 × 0.020 / 4 = 85 % busy.
+
+        Latency does not grow in a straight line with utilization. With several cores sharing one queue (the M/M/c model, Erlang C) waiting stays small until about 70–80 % and then climbs steeply towards 100 %. That knee is why capacity is planned with headroom, not for the average.
+      tr: |-
+        Kullanım, iş hacmi çarpı hizmet süresidir: U = X × S. NODE-01'in reaktöründe 4 çekirdek var ve her biri bir isteği 20 ms'de işliyor; saniyede 170 istek reaktörü 170 × 0,020 / 4 = %85 meşgul tutar.
+
+        Gecikme kullanımla doğrusal artmaz. Birkaç çekirdek tek kuyruğu paylaştığında (M/M/c modeli, Erlang C) bekleme %70–80'e kadar küçük kalır, sonra %100'e doğru dikleşir. Kapasitenin ortalamaya göre değil, pay bırakılarak planlanmasının nedeni bu dirsektir.
+
+  - id: occupancy-model
+    title: { en: "Pools: occupancy", tr: "Havuzlar: doluluk" }
+    body:
+      en: |-
+        A thread pool or a connection pool is a fixed number of slots. Each request holds a slot for its hold time; while all slots are taken, new requests wait in a queue, and when the queue is full they are rejected.
+
+        A pool is limited by how long requests hold it, not by CPU. Ten connections held for 50 ms each serve 200 queries per second; if a slow query holds them for 400 ms, the same pool serves only 25. Watch active and pending slots, not just CPU.
+      tr: |-
+        Thread havuzu ya da bağlantı havuzu sabit sayıda yuvadır. Her istek bir yuvayı tutma süresi boyunca tutar; tüm yuvalar doluyken yeni istekler kuyrukta bekler, kuyruk dolunca reddedilir.
+
+        Havuzu CPU değil, isteklerin onu ne kadar tuttuğu sınırlar. 50 ms tutulan on bağlantı saniyede 200 sorgu karşılar; yavaş bir sorgu onları 400 ms tutarsa aynı havuz yalnızca 25 sorgu karşılar. Sadece CPU'ya değil, aktif ve bekleyen yuvalara bakın.
+
+  - id: littles-law
+    title: { en: "Little's law", tr: "Little yasası" }
+    body:
+      en: |-
+        In any stable system, the average number of items inside equals the arrival rate times the average time each spends there: L = λ × W.
+
+        It sizes pools without guessing. 100 requests per second that each hold a database connection for 50 ms keep 100 × 0.05 = 5 connections busy on average, so a pool of 10 has room. If the hold time grows to 200 ms, 20 connections would be needed: the pool of 10 saturates and requests start to queue.
+      tr: |-
+        Kararlı her sistemde içerideki ortalama öğe sayısı, geliş hızı çarpı her birinin içeride geçirdiği ortalama süreye eşittir: L = λ × W.
+
+        Havuzları tahminsiz boyutlandırır. Her biri veritabanı bağlantısını 50 ms tutan saniyede 100 istek ortalama 100 × 0,05 = 5 bağlantıyı meşgul eder; 10'luk havuzda yer vardır. Tutma süresi 200 ms'ye çıkarsa 20 bağlantı gerekir: 10'luk havuz doyar ve istekler kuyruğa girer.
+
+  - id: fill-model
+    title: { en: "Fill: disks and buffers", tr: "Dolum: diskler ve tamponlar" }
+    body:
+      en: |-
+        Some resources fill up instead of getting busy: disks, log volumes, message queues. The level changes by inflow minus drain, and time to full is free space divided by that net rate.
+
+        Nothing looks wrong until the very end. A disk at 90 % serves requests exactly like a disk at 10 %; at 100 % every write fails at once. That is why fill resources need a forecast and an alert on the trend, not only on the level.
+      tr: |-
+        Bazı kaynaklar meşgul olmak yerine dolar: diskler, log alanları, mesaj kuyrukları. Seviye giriş eksi boşaltma kadar değişir; dolmaya kalan süre boş alan bölü bu net hızdır.
+
+        Sonuna kadar hiçbir şey ters görünmez. %90 dolu bir disk istekleri %10 dolu bir disk gibi karşılar; %100'de ise bütün yazmalar birden başarısız olur. Bu yüzden dolum kaynakları sadece seviyeye göre değil, eğilime göre tahmin ve alarm ister.
+
+  # --- observability ---
+  - id: prometheus
+    title: { en: "Prometheus and Micrometer", tr: "Prometheus ve Micrometer" }
+    body:
+      en: |-
+        Prometheus pulls metrics: every few seconds it scrapes an HTTP endpoint such as Spring Boot's /actuator/prometheus, where Micrometer exposes counters, gauges and histograms.
+
+        Counters only go up, so you query their rate: rate(http_server_requests_seconds_count[5m]) is requests per second. Gauges are current values, like busy Tomcat threads or active Hikari connections. Without metrics you learn about problems from your users, late and vaguely.
+      tr: |-
+        Prometheus metrikleri çeker: birkaç saniyede bir, Spring Boot'un /actuator/prometheus gibi bir HTTP ucunu tarar; Micrometer orada sayaçları, göstergeleri ve histogramları yayınlar.
+
+        Sayaçlar sadece artar, bu yüzden hızları sorgulanır: rate(http_server_requests_seconds_count[5m]) saniyedeki istek sayısıdır. Göstergeler anlık değerdir: meşgul Tomcat thread'leri ya da aktif Hikari bağlantıları gibi. Metrik yoksa sorunları kullanıcılarınızdan, geç ve belirsiz öğrenirsiniz.
+
+  - id: use-method
+    title: { en: "The USE method", tr: "USE yöntemi" }
+    body:
+      en: |-
+        Brendan Gregg's checklist for finding a bottleneck: for every resource, check Utilization (how busy it is), Saturation (how much work is waiting) and Errors.
+
+        Walk the request path: CPU, thread pool, connection pool, database CPU and I/O, disk. The first resource that is saturated is usually the bottleneck; the ones behind it look idle because work cannot reach them. A low CPU next to a full connection pool points at the database, not at the code.
+      tr: |-
+        Brendan Gregg'in darboğaz bulma listesi: her kaynak için Kullanım (ne kadar meşgul), Doygunluk (ne kadar iş bekliyor) ve Hatalar kontrol edilir.
+
+        İstek yolunu izleyin: CPU, thread havuzu, bağlantı havuzu, veritabanı CPU'su ve I/O'su, disk. Doyan ilk kaynak genellikle darboğazdır; arkasındakiler boş görünür çünkü iş onlara ulaşamaz. Dolu bir bağlantı havuzunun yanında düşük CPU, kodu değil veritabanını işaret eder.
+
+  - id: dashboards
+    title: { en: "Dashboards that answer questions", tr: "Soru cevaplayan panolar" }
+    body:
+      en: |-
+        Grafana turns raw metrics into views. A useful service dashboard starts with the RED signals users feel: Rate of requests, Errors, and Duration (latency, including a high percentile such as p99), followed by the USE view of the resources behind them.
+
+        Averages hide pain: a 30 ms mean can sit next to a 2 s p99. A good dashboard answers "are users hurting, and where?" within seconds; a wall of unrelated graphs answers nothing.
+      tr: |-
+        Grafana ham metrikleri görünümlere dönüştürür. İşe yarar bir servis panosu kullanıcının hissettiği RED sinyalleriyle başlar: istek Hızı, Hatalar ve Süre (gecikme, p99 gibi yüksek bir yüzdelik dahil); ardından arkadaki kaynakların USE görünümü gelir.
+
+        Ortalamalar acıyı gizler: 30 ms'lik bir ortalamanın yanında 2 sn'lik bir p99 olabilir. İyi bir pano "kullanıcılar zarar görüyor mu, nerede?" sorusunu saniyeler içinde cevaplar; birbiriyle ilgisiz grafiklerden oluşan bir duvar hiçbir şey cevaplamaz.
+
+  - id: predict-linear
+    title: { en: "Alerting on trends: predict_linear", tr: "Eğilime alarm: predict_linear" }
+    body:
+      en: |-
+        For resources that fill up, alert on where the trend is going, not on where the level is. PromQL's predict_linear fits a straight line to recent samples and extrapolates it.
+
+        predict_linear(node_filesystem_avail_bytes[6h], 4 * 3600) < 0 fires when the disk will be full within four hours at the current rate, early enough to act calmly. A plain "disk above 90 %" alert fires too late on a fast fill and too early on a disk that grows for months.
+      tr: |-
+        Dolan kaynaklarda alarm seviyenin nerede olduğuna değil, eğilimin nereye gittiğine kurulur. PromQL'in predict_linear fonksiyonu son örneklere bir doğru oturtur ve onu ileriye uzatır.
+
+        predict_linear(node_filesystem_avail_bytes[6h], 4 * 3600) < 0, disk mevcut hızla dört saat içinde dolacaksa tetiklenir; sakin müdahale için yeterince erken. Düz bir "disk %90'ın üstünde" alarmı hızlı dolumda çok geç, aylarca büyüyen bir diskte ise çok erken çalar.
+
+  - id: traffic-heatmap
+    title: { en: "Traffic heatmaps", tr: "Trafik ısı haritaları" }
+    body:
+      en: |-
+        A heatmap shows traffic by hour of day (and often by region) as colour, so daily patterns stand out: when each colony wakes up, works and sleeps.
+
+        It answers questions a single rate graph hides: when is the quiet window for maintenance, and which "night-time" job actually runs during somebody's afternoon? Schedules should follow the users' clock, not the server's.
+      tr: |-
+        Isı haritası trafiği günün saatine (çoğu zaman bölgeye de) göre renkle gösterir; böylece günlük desenler öne çıkar: her koloni ne zaman uyanıyor, çalışıyor, uyuyor.
+
+        Tek bir hız grafiğinin gizlediği soruları cevaplar: bakım için sessiz pencere ne zaman, hangi "gece" işi aslında birinin öğleden sonrasında çalışıyor? Zamanlamalar sunucunun değil, kullanıcıların saatine göre yapılmalıdır.
+
+  - id: pg-stat-statements
+    title: { en: "pg_stat_statements", tr: "pg_stat_statements" }
+    body:
+      en: |-
+        A PostgreSQL extension that aggregates statistics per normalized query: how often it ran, total and mean execution time, rows, buffer hits and reads. It must be loaded through shared_preload_libraries.
+
+        Sorting by total execution time finds the queries that cost the database most, which is rarely the one you suspect. A cheap query run a million times can outweigh a slow one; a query whose mean time keeps rising with table size often lacks an index.
+      tr: |-
+        Normalize edilmiş her sorgu için istatistik toplayan bir PostgreSQL eklentisi: kaç kez çalıştığı, toplam ve ortalama çalışma süresi, satır sayısı, tampon isabetleri ve okumalar. shared_preload_libraries ile yüklenmesi gerekir.
+
+        Toplam çalışma süresine göre sıralamak veritabanına en pahalıya mal olan sorguları bulur; bu nadiren şüphelendiğiniz sorgudur. Milyon kez çalışan ucuz bir sorgu yavaş bir sorgudan ağır basabilir; ortalama süresi tablo büyüdükçe artan bir sorguda genellikle indeks eksiktir.
+
+  # --- logs and disks ---
+  - id: log-levels
+    title: { en: "Log levels", tr: "Log seviyeleri" }
+    body:
+      en: |-
+        Loggers filter by level: TRACE, DEBUG, INFO, WARN, ERROR. Production usually runs at INFO; DEBUG can multiply log volume many times over, with full payloads on every request.
+
+        Turn DEBUG on for one logger and for a limited time, never as the root level, and make the setting part of the deploy review. A forgotten DEBUG flag costs disk, I/O and money, and can leak personal data into logs.
+      tr: |-
+        Logger'lar seviyeye göre süzer: TRACE, DEBUG, INFO, WARN, ERROR. Canlı ortam genellikle INFO'da çalışır; DEBUG her istekte tam içerik yazarak log hacmini kat kat artırabilir.
+
+        DEBUG'ı kök seviye olarak değil, tek bir logger için ve sınırlı bir süre açın; bu ayarı deploy incelemesinin parçası yapın. Unutulmuş bir DEBUG bayrağı disk, I/O ve para harcatır, kişisel verileri loglara sızdırabilir.
+
+  - id: logrotate
+    title: { en: "Log rotation", tr: "Log döndürme" }
+    body:
+      en: |-
+        logrotate renames the current log file on a schedule or at a size, compresses old files and deletes those beyond a retention limit, for example seven days. Disk usage for logs becomes bounded.
+
+        The cost is history: what was rotated away is gone when an investigation needs it. Long-term logs belong in a central store (such as Loki or Elasticsearch) with its own retention, not on the application's disk.
+      tr: |-
+        logrotate geçerli log dosyasını bir takvime ya da boyuta göre yeniden adlandırır, eskileri sıkıştırır ve saklama sınırını (örneğin yedi gün) aşanları siler. Logların disk kullanımı sınırlanır.
+
+        Bedeli geçmiştir: döndürülüp silinen kayıt, bir inceleme ona ihtiyaç duyduğunda yoktur. Uzun süreli loglar uygulamanın diskinde değil, kendi saklama süresi olan merkezi bir depoda (Loki ya da Elasticsearch gibi) tutulmalıdır.
+
+  # --- capacity and overload ---
+  - id: vertical-vs-horizontal
+    title: { en: "Scaling up or out", tr: "Dikey ya da yatay ölçekleme" }
+    body:
+      en: |-
+        Scaling up (vertical) means a bigger machine: more cores or memory. It needs no code change, but usually a restart, it has a ceiling, and the cost grows faster than the capacity.
+
+        Scaling out (horizontal) means more machines behind a load balancer. It grows further and survives the loss of one node, but the application must be stateless or share its state. Neither fixes a slow query or a missing index; they only buy room.
+      tr: |-
+        Dikey ölçekleme daha büyük bir makine demektir: daha çok çekirdek ya da bellek. Kod değişikliği gerektirmez ama genellikle yeniden başlatma ister, bir tavanı vardır ve maliyet kapasiteden hızlı artar.
+
+        Yatay ölçekleme, bir yük dengeleyicinin arkasında daha çok makine demektir. Daha fazla büyür ve bir düğümün kaybına dayanır, ama uygulamanın durumsuz olması ya da durumunu paylaşması gerekir. İkisi de yavaş bir sorguyu ya da eksik bir indeksi düzeltmez; sadece yer açar.
+
+  - id: rate-limiting
+    title: { en: "Rate limiting", tr: "Hız sınırlama" }
+    body:
+      en: |-
+        A rate limiter admits requests up to a set rate and turns the excess away at the edge, before it reaches the application. Nginx's limit_req uses a leaky bucket; a burst setting allows short spikes.
+
+        It protects the system from collapse, because a saturated server that queues everything becomes slow for everyone. It does not create capacity: the rejected users still failed and still count against the SLO.
+      tr: |-
+        Hız sınırlayıcı istekleri belirlenen hıza kadar kabul eder, fazlasını uygulamaya ulaşmadan kenarda geri çevirir. Nginx'in limit_req'i sızdıran kova kullanır; burst ayarı kısa sıçramalara izin verir.
+
+        Sistemi çökmekten korur, çünkü her şeyi kuyruğa alan doymuş bir sunucu herkes için yavaşlar. Kapasite yaratmaz: geri çevrilen kullanıcılar yine başarısız olmuştur ve yine SLO'dan düşer.
+
+  - id: http-429-vs-503
+    title: { en: "429 or 503?", tr: "429 mu, 503 mü?" }
+    body:
+      en: |-
+        429 Too Many Requests means this client sent more than it is allowed; it can carry Retry-After so polite clients wait. 503 Service Unavailable means the server cannot handle the request right now, for example during overload or maintenance.
+
+        The choice tells clients whom to blame and how to retry. Either way the user's request failed, so both count against the error budget; neither status code makes an outage cheaper.
+      tr: |-
+        429 Too Many Requests, bu istemcinin izin verilenden fazla istek gönderdiği anlamına gelir; kibar istemcilerin beklemesi için Retry-After taşıyabilir. 503 Service Unavailable, sunucunun isteği şu anda karşılayamadığı anlamına gelir; örneğin aşırı yükte ya da bakımda.
+
+        Seçim, istemcilere kusurun kimde olduğunu ve nasıl yeniden deneyeceklerini söyler. Her iki durumda da kullanıcının isteği başarısız olmuştur; ikisi de hata bütçesinden düşer, hiçbir durum kodu kesintiyi ucuzlatmaz.
+
+  - id: tomcat-threads
+    title: { en: "Tomcat threads and acceptCount", tr: "Tomcat thread'leri ve acceptCount" }
+    body:
+      en: |-
+        Tomcat serves each request on a worker thread: maxThreads (200 by default) of them. When all are busy, up to acceptCount (100) connections wait in the operating system's queue; beyond that, connections are refused.
+
+        More threads only help when the threads are the bottleneck. If they are waiting for the same 10 database connections, raising maxThreads to 400 just lets 400 requests wait instead of 200, with more memory and more context switching.
+      tr: |-
+        Tomcat her isteği bir işçi thread'inde karşılar: maxThreads tane (varsayılan 200). Hepsi meşgulken acceptCount (100) kadar bağlantı işletim sisteminin kuyruğunda bekler; ötesindeki bağlantılar reddedilir.
+
+        Daha çok thread, ancak darboğaz thread'lerse işe yarar. Thread'ler aynı 10 veritabanı bağlantısını bekliyorsa maxThreads'i 400'e çıkarmak 200 yerine 400 isteğin beklemesini sağlar; üstüne daha çok bellek ve daha çok bağlam değişimi gelir.
+
+  - id: retry-amplification
+    title: { en: "Retry amplification", tr: "Yeniden deneme çoğalması" }
+    body:
+      en: |-
+        Retrying a failed request feels safe, but when the failure comes from overload every retry adds load to a system that is already struggling. With one immediate retry, a 50 % failure rate turns into 1.5 times the traffic; layers that each retry multiply it further.
+
+        Retry with exponential backoff and jitter, cap the attempts, keep a retry budget, and only retry idempotent operations.
+      tr: |-
+        Başarısız bir isteği yeniden denemek güvenli görünür; ama hata aşırı yükten geliyorsa her yeniden deneme zaten zorlanan sisteme yük ekler. Tek bir anında yeniden denemeyle %50'lik hata oranı trafiği 1,5 katına çıkarır; her biri yeniden deneyen katmanlar bunu daha da çarpar.
+
+        Üstel geri çekilme ve rastgele sapma (jitter) ile yeniden deneyin, deneme sayısını sınırlayın, bir yeniden deneme bütçesi tutun ve sadece idempotent işlemleri yeniden deneyin.
+
+  # --- database ---
+  - id: db-indexes
+    title: { en: "Database indexes", tr: "Veritabanı indeksleri" }
+    body:
+      en: |-
+        Without an index, a query that filters on a column must read the whole table: its cost grows with every row. A B-tree index finds the matching rows in logarithmic time, so the same query stays fast at a million rows.
+
+        Indexes are not free: every insert and update must also update them, and they take space. Find the query first (pg_stat_statements), confirm the plan with EXPLAIN ANALYZE, then index what the slow queries actually filter and sort on.
+      tr: |-
+        İndeks yoksa bir sütuna göre süzen sorgu tüm tabloyu okumak zorundadır: maliyeti her satırla artar. B-tree indeks eşleşen satırları logaritmik sürede bulur; aynı sorgu bir milyon satırda da hızlı kalır.
+
+        İndeksler bedava değildir: her ekleme ve güncelleme onları da güncellemek zorundadır ve yer kaplarlar. Önce sorguyu bulun (pg_stat_statements), planı EXPLAIN ANALYZE ile doğrulayın, sonra yavaş sorguların gerçekten süzdüğü ve sıraladığı sütunları indeksleyin.
+
+  - id: create-index-concurrently
+    title: { en: "CREATE INDEX CONCURRENTLY", tr: "CREATE INDEX CONCURRENTLY" }
+    body:
+      en: |-
+        A plain CREATE INDEX locks the table against writes until the index is built: fast, but every insert and update waits, which on a busy table is an outage.
+
+        CREATE INDEX CONCURRENTLY lets writes continue. It scans the table twice and waits for running transactions, so it takes longer and adds I/O while it runs. It cannot run inside a transaction block, and if it fails it leaves an INVALID index behind that must be dropped and rebuilt.
+      tr: |-
+        Düz CREATE INDEX, indeks oluşana kadar tabloyu yazmalara kilitler: hızlıdır ama her ekleme ve güncelleme bekler; yoğun bir tabloda bu bir kesintidir.
+
+        CREATE INDEX CONCURRENTLY yazmaların sürmesine izin verir. Tabloyu iki kez tarar ve süren transaction'ları bekler; bu yüzden daha uzun sürer ve çalışırken I/O ekler. Bir transaction bloğu içinde çalışamaz; başarısız olursa geride silinip yeniden oluşturulması gereken INVALID bir indeks bırakır.
+
+  - id: statement-timeout
+    title: { en: "statement_timeout", tr: "statement_timeout" }
+    body:
+      en: |-
+        PostgreSQL's statement_timeout cancels any statement that runs longer than the limit. It works like a fuse: a runaway query fails after, say, 2 seconds instead of holding a pool connection for a minute while everything behind it waits.
+
+        Set it per role or per transaction so batch jobs can have a longer limit than user requests. Cancelled queries are still errors for the user; the timeout limits the damage, the index or the rewrite fixes the cause.
+      tr: |-
+        PostgreSQL'in statement_timeout ayarı sınırı aşan her ifadeyi iptal eder. Sigorta gibi çalışır: kontrolden çıkan bir sorgu, arkasındaki her şey beklerken bir havuz bağlantısını bir dakika tutmak yerine örneğin 2 saniye sonra başarısız olur.
+
+        Toplu işler kullanıcı isteklerinden daha uzun bir sınıra sahip olabilsin diye rol ya da transaction bazında ayarlayın. İptal edilen sorgular kullanıcı için yine hatadır; zaman aşımı zararı sınırlar, nedeni indeks ya da sorgunun yeniden yazılması düzeltir.
+
+  # --- batch jobs ---
+  - id: cron-timezones
+    title: { en: "Cron and time zones", tr: "Cron ve saat dilimleri" }
+    body:
+      en: |-
+        A cron expression runs in the time zone of whatever evaluates it, usually the server's. "0 3 * * *" is a quiet 03:00 on the station and 15:00, peak afternoon, in a colony twelve hours away.
+
+        Name the zone explicitly (CRON_TZ, or zone on Spring's @Scheduled), schedule heavy jobs by your users' traffic rather than by the server clock, and remember that daylight saving time can skip or repeat an hour.
+      tr: |-
+        Bir cron ifadesi onu değerlendiren şeyin, genellikle sunucunun saat diliminde çalışır. "0 3 * * *" istasyonda sakin bir 03:00, on iki saat ötedeki bir kolonide ise öğleden sonra yoğunluğunun ortası olan 15:00'tir.
+
+        Dilimi açıkça belirtin (CRON_TZ ya da Spring'in @Scheduled'ındaki zone), ağır işleri sunucu saatine değil kullanıcı trafiğine göre zamanlayın ve yaz saati uygulamasının bir saati atlayabileceğini ya da tekrarlayabileceğini unutmayın.
+
+  - id: batch-chunking
+    title: { en: "Chunking and throttling batch jobs", tr: "Toplu işleri parçalamak ve yavaşlatmak" }
+    body:
+      en: |-
+        A batch job that reads a whole table in one go competes with users for I/O and connections until it finishes. Chunk-oriented processing (Spring Batch reads, processes and commits, for example, 1000 items at a time) keeps transactions short and makes progress restartable.
+
+        Adding a pause between chunks throttles the job so it takes only a share of the database. The job takes longer; the users stop noticing it.
+      tr: |-
+        Tüm tabloyu tek seferde okuyan bir toplu iş, bitene kadar I/O ve bağlantılar için kullanıcılarla yarışır. Parça odaklı işleme (Spring Batch örneğin 1000 öğeyi okur, işler ve commit eder) transaction'ları kısa tutar ve ilerlemeyi yeniden başlatılabilir kılar.
+
+        Parçalar arasına bekleme eklemek işi yavaşlatır, böylece veritabanının sadece bir payını alır. İş daha uzun sürer; kullanıcılar onu fark etmez olur.
+
+  - id: bulkhead
+    title: { en: "Bulkheads", tr: "Bölmeler (bulkhead)" }
+    body:
+      en: |-
+        Ships are split into watertight compartments so one leak does not sink them. In software, a bulkhead gives a workload its own limited resources: a separate small connection pool or thread pool for the report job, for example 2 connections out of 10.
+
+        The job can then use at most its share and can no longer starve user requests, even when it misbehaves. Resilience4j provides bulkheads for calls between services; separate pools do the same inside one.
+      tr: |-
+        Gemiler, tek bir sızıntı batırmasın diye su geçirmez bölmelere ayrılır. Yazılımda bölme, bir iş yüküne kendi sınırlı kaynaklarını verir: rapor işi için ayrı küçük bir bağlantı ya da thread havuzu, örneğin 10 bağlantıdan 2'si.
+
+        İş böylece en fazla kendi payını kullanabilir ve hatalı davransa bile kullanıcı isteklerini aç bırakamaz. Resilience4j servisler arası çağrılar için bölmeler sağlar; tek bir servisin içinde ayrı havuzlar aynı işi görür.

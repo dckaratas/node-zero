@@ -1,5 +1,6 @@
 package com.nodezero.server;
 
+import com.nodezero.server.protocol.CodexBook;
 import com.nodezero.server.protocol.CounterCatalog;
 import com.nodezero.sim.engine.Game;
 import org.springframework.context.annotation.Bean;
@@ -18,5 +19,10 @@ class GameConfig {
     @Bean
     CounterCatalog counterCatalog(Game game) {
         return new CounterCatalog(game.rules().content());
+    }
+
+    @Bean
+    CodexBook codexBook(Game game) {
+        return new CodexBook(game.rules().content());
     }
 }

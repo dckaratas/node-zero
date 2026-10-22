@@ -29,5 +29,6 @@
     "id" : "grafana",
     "option" : null,
     "readyTick" : 52
-  } ]
+  } ],
+  "codex" : [ "prometheus", "use-method", "dashboards", "traffic-heatmap" ]
 }

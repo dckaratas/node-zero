@@ -36,6 +36,8 @@ export interface Snapshot {
   counters?: InstalledCounter[];
   /** Present while a postmortem is open or just answered; absent otherwise (not a delta field). */
   postmortem?: Postmortem;
+  /** Opened codex entry ids, in the order earned; absent when unchanged (delta field). */
+  codex?: string[];
 }
 
 /** Root-cause question after a threat wave. Texts are i18n keys; `correct` is null until answered. */
@@ -58,6 +60,19 @@ export interface InstalledCounter {
 export interface Catalog {
   language: string;
   counters: CatalogItem[];
+}
+
+/** GET /api/sessions/{id}/codex: the articles this session has opened. */
+export interface Codex {
+  language: string;
+  entries: CodexArticle[];
+}
+
+/** Plain text; a blank line separates paragraphs. */
+export interface CodexArticle {
+  id: string;
+  title: string;
+  body: string;
 }
 
 export interface CatalogItem {
@@ -200,6 +215,18 @@ function catalogItem(v: unknown, path: string): CatalogItem {
   };
 }
 
+function article(v: unknown, path: string): CodexArticle {
+  const o = object(v, path);
+  keys(o, path, ['id', 'title', 'body']);
+  return { id: str(o['id'], `${path}.id`), title: str(o['title'], `${path}.title`), body: str(o['body'], `${path}.body`) };
+}
+
+export function parseCodex(v: unknown): Codex {
+  const o = object(v, 'codex');
+  keys(o, 'codex', ['language', 'entries']);
+  return { language: str(o['language'], 'codex.language'), entries: list(o['entries'], 'codex.entries', article) };
+}
+
 export function parseCatalog(v: unknown): Catalog {
   const o = object(v, 'catalog');
   keys(o, 'catalog', ['language', 'counters']);
@@ -244,7 +271,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       };
     case 'snapshot': {
       keys(o, 'snapshot', ['type', 'tick', 'credits', 'wave', 'phase', 'shield', 'metrics', 'signals'],
-        ['insights', 'counters', 'postmortem']);
+        ['insights', 'counters', 'postmortem', 'codex']);
       const phase = str(o['phase'], 'snapshot.phase');
       if (!PHASES.includes(phase)) throw new ProtocolError(`snapshot.phase: unknown ${phase}`);
       const s: Snapshot = {
@@ -260,6 +287,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       if (o['insights'] !== undefined) s.insights = strings(o['insights'], 'snapshot.insights');
       if (o['counters'] !== undefined) s.counters = list(o['counters'], 'snapshot.counters', installed);
       if (o['postmortem'] !== undefined) s.postmortem = postmortem(o['postmortem'], 'snapshot.postmortem');
+      if (o['codex'] !== undefined) s.codex = strings(o['codex'], 'snapshot.codex');
       return s;
     }
     case 'rejected':

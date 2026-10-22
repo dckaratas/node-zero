@@ -2,14 +2,15 @@ import './style.css';
 import { Orders } from './game/orders';
 import { Review } from './game/postmortem';
 import { GameStore } from './game/store';
+import { CodexPanel } from './hud/codexPanel';
 import { CounterPanel } from './hud/counterPanel';
 import { Hud } from './hud/hud';
 import { PostmortemDialog } from './hud/postmortemDialog';
 import { StationMap } from './map/stationMap';
-import { CatalogLoader } from './net/catalog';
 import { Connection } from './net/connection';
 import { Texts } from './net/i18n';
-import type { ClientAction } from './protocol/messages';
+import { SessionResource } from './net/sessionResource';
+import { parseCatalog, parseCodex, type ClientAction } from './protocol/messages';
 
 function byId(id: string): HTMLElement {
   const e = document.getElementById(id);
@@ -27,6 +28,7 @@ await map.mount(byId('map'));
 let session: string | undefined;
 let tickHz = 10;
 let insightsKey = '';
+let codexKey = '';
 
 const connection = new Connection(Connection.defaultUrl(), {
   onMessage(message) {
@@ -35,11 +37,13 @@ const connection = new Connection(Connection.defaultUrl(), {
         session = message.session;
         tickHz = message.tickHz;
         insightsKey = '';
+        codexKey = '';
         store.reset();
         store.setSnapshotRate(message.snapshotHz);
         orders.clear();
         review.reset();
         panel.reset();
+        codexPanel.reset();
         catalog.load(session);
         hud.setPaused(false);
         hud.showNotice(`Session ${message.session.slice(0, 8)} · seed ${message.seed}`);
@@ -52,6 +56,12 @@ const connection = new Connection(Connection.defaultUrl(), {
         if (key !== insightsKey && session !== undefined) {
           insightsKey = key;
           catalog.load(session);
+        }
+        // A purchase or an answered postmortem opened codex entries: fetch their texts.
+        const opened = view.codex.join('|');
+        if (opened !== codexKey && session !== undefined) {
+          codexKey = opened;
+          codex.load(session);
         }
         break;
       }
@@ -85,9 +95,14 @@ const panel = new CounterPanel(hud.countersHost, orders, (item, option) => {
   if (option !== undefined) action.option = option;
   if (send(action)) orders.place(item);
 }, () => tickHz);
-const catalog = new CatalogLoader((c) => panel.setCatalog(c), (e: unknown) => {
+const catalog = new SessionResource('catalog', parseCatalog, (c) => panel.setCatalog(c), (e: unknown) => {
   console.error(e);
   hud.showNotice('Could not load the module catalog');
+});
+const codexPanel = new CodexPanel(hud.codexHost);
+const codex = new SessionResource('codex', parseCodex, (c) => codexPanel.show(c), (e: unknown) => {
+  console.error(e);
+  hud.showNotice('Could not load the codex');
 });
 
 const postmortem = new PostmortemDialog(review, texts, (wave, option) => {

@@ -17,6 +17,7 @@ import java.util.Map;
  * @param insights diagnostic capabilities gained (e.g. {@code pg-stat-statements})
  * @param counters installed counters in purchase order, including ones still being built
  * @param postmortem the open or just-answered postmortem, or {@code null}
+ * @param codex codex entries the player has opened (ids; texts come from the server by language)
  */
 public record Observation(
         long tick,
@@ -28,7 +29,8 @@ public record Observation(
         List<String> signals,
         List<String> insights,
         List<Counter> counters,
-        Postmortem postmortem) {
+        Postmortem postmortem,
+        List<String> codex) {
 
     /**
      * A root-cause question after a threat wave (ADR-0007/0008). Texts are keys (ADR-0009).
@@ -63,5 +65,6 @@ public record Observation(
         signals = List.copyOf(signals);
         insights = List.copyOf(insights);
         counters = List.copyOf(counters);
+        codex = List.copyOf(codex);
     }
 }

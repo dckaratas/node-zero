@@ -6,7 +6,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
-import java.util.Locale;
+import java.util.Optional;
 import java.util.Map;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -46,12 +46,11 @@ class I18nController {
 
     @GetMapping("/api/i18n/{lang}")
     ResponseEntity<Map<String, String>> bundle(@PathVariable String lang, WebRequest request) {
-        Language language;
-        try {
-            language = Language.valueOf(lang.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException unknown) {
+        Optional<Language> parsed = Languages.parse(lang);
+        if (parsed.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+        Language language = parsed.get();
         String etag = etags.get(language);
         if (request.checkNotModified(etag)) {
             return ResponseEntity.status(304).eTag(etag).build();

@@ -23,6 +23,8 @@ class ChapterOneContentTest {
                 .containsExactly("log-storm", "traffic-surge", "slow-endpoint", "nightly-report-job");
         assertThat(content.threats().values()).allMatch(t -> t.chapter() == 1);
         assertThat(content.counters()).hasSize(15);
+        assertThat(content.codex()).hasSize(23);
+        assertThat(content.codex().get("littles-law").title().in(Language.TR)).isEqualTo("Little yasası");
     }
 
     @Test

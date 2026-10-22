@@ -3,7 +3,7 @@ package com.nodezero.server.web;
 import com.nodezero.server.protocol.CounterCatalog;
 import com.nodezero.server.session.SessionHost;
 import com.nodezero.sim.content.Language;
-import java.util.Locale;
+import java.util.Optional;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,12 +31,11 @@ class CatalogController {
     @GetMapping("/api/sessions/{id}/catalog")
     ResponseEntity<CounterCatalog.Catalog> catalog(
             @PathVariable String id, @RequestParam(defaultValue = "en") String lang, WebRequest request) {
-        Language language;
-        try {
-            language = Language.valueOf(lang.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException unknown) {
+        Optional<Language> parsed = Languages.parse(lang);
+        if (parsed.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+        Language language = parsed.get();
         return host.find(id)
                 .map(session -> catalog.visible(language, session.state().progress().insights()))
                 .map(body -> {

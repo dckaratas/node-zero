@@ -43,6 +43,8 @@ Kontrol soruları ve düzeltilen yanlış sezgiler. Mülakat hazırlığı için
   model neyi eksik bırakıyor? (USE, thread doygunluğunda CPU düşük; kaynaklar arası bağlantı Dilim 3)
 - Dilim 1b: Tomcat thread havuzu mu, Hikari mi önce dolar; kullanıcı hangi hatayı görür?
   (Hikari `connectionTimeout` → `SQLTransientConnectionException` → 500; thread'ler bekleyerek tükenir → acceptCount)
+- Dilim 6b (gözden geçirme görevi): `sim-core/src/main/resources/content/codex/chapter-1.yaml` içindeki 23 kodeks maddesini
+  teknik doğruluk ve Türkçe anlatım açısından oku; bankacılık/canlı ortam deneyiminle çelişen ya da eksik bulduğun yeri not et.
 
 ## Dayanıklılık
 - Naive retry yükü **katlar** (×2, ×3...). Retry fırtınası, düşen servisi tamamen boğar → backoff + jitter + bütçe.

@@ -1,6 +1,6 @@
 # ADR-0017: Postmortem, kodeks ve i18n uygulaması (Dilim 6)
 
-- **Durum:** Kabul edildi (6a uygulandı; 6b kodeks, 6c dil seçici)
+- **Durum:** Kabul edildi (6a postmortem ve 6b kodeks uygulandı; 6c dil seçici)
 - **Tarih:** 2026-10-22
 
 ## Bağlam
@@ -29,3 +29,17 @@ EN/TR) hazırdı; kodeks maddeleri atıf olarak vardı ama yazılmamıştı; `re
 - **Tuzak:** Chrome, kullanıcı etkileşimi olmadan açılmış `<dialog>`'da `cancel` olayının `preventDefault`'unu yok sayar
   (close request kuralı). Çözüm: `close` olayında durum unutulur, soru açıksa bir sonraki karede yeniden açılır.
 - Eski iki test (`WaveAndCounterTest`) postmortemi atlıyordu; aynı tick'te önce cevap, sonra dalga.
+
+## Ek (Dilim 6b, 2026-10-22): kodeks
+- İçerik: `content/codex/chapter-1.yaml`, 23 madde × EN/TR (başlık + 2 paragraf düz metin). Yükleyici iki yönde katı:
+  her `codex:` atfı bir maddeye çözülmeli **ve** hiçbir madde yetim kalmamalı (i18n'deki "kullanılmayan anahtar yok" kuralının eşi).
+- Açılma (`Progress.codex`, deterministik, replay ile aynı): **sayaç satın alınınca** o sayacın maddeleri; **tehdidin maddeleri
+  postmortem cevaplanınca** (yanlış cevapta da; açıklama ödül değil, öğrenme).
+- **AB'den sapma:** AB "tehdit ilk görüldüğünde" diyordu. Uygularken `log-storm` → `log-levels` gibi maddelerin postmortem
+  sorusunun cevabını ele verdiği görüldü; bu yüzden tehdit maddeleri cevaptan sonra açılıyor. Amaç (deneyimden hemen sonra
+  yerinde öğrenme, ADR-0008) aynı; zamanlama spoiler'ı önlemek için kaydırıldı.
+- Protokol: snapshot'ta `codex` (id listesi, `insights`/`counters` gibi değişmediyse yok); metinler
+  `GET /api/sessions/{id}/codex?lang=` ile sadece açılmışlar için (ETag/304). İstemci liste değişince yeniden çeker.
+- İstemci: `<details>` tabanlı kodeks bölümü (klavye/ekran okuyucu ücretsiz), en yeni üstte, açılana kadar "new"; yenilemede
+  açık makaleler açık kalır. Uzun modül listesinin altında kaybolmasın diye panelde Modules'un üstünde.
+- Teknik içerik Claude tarafından yazıldı; **kullanıcı teknik doğruluk açısından gözden geçirecek** (öğrenme notlarına eklendi).

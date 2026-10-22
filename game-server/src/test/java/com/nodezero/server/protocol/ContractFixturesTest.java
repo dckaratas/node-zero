@@ -91,6 +91,16 @@ class ContractFixturesTest {
         matchFixture("catalog", json.writeValueAsString(body));
     }
 
+    /** Two opened articles, in the order they were earned. */
+    @Test
+    void codexMatchesTheClientFixture() throws IOException {
+        CodexBook.Codex body = new CodexBook(Game.chapterOne().rules().content())
+                .opened(Language.EN, List.of("prometheus", "use-method", "no-such-entry"));
+
+        assertThat(body.entries()).extracting(CodexBook.Article::id).containsExactly("prometheus", "use-method");
+        matchFixture("codex", json.writeValueAsString(body));
+    }
+
     private static void matchFixture(String name, String json) throws IOException {
         // The pretty printer uses the platform line separator; fixtures are LF everywhere.
         String expected = json.replace("\r\n", "\n") + "\n";

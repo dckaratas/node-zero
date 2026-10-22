@@ -7,7 +7,7 @@ import java.util.Objects;
  * Turns one session's observations into the snapshots worth sending (ADR-0015 addendum, decision T).
  * <ul>
  *   <li>A view equal to the last one sent (ignoring the tick) is skipped: an idle station costs nothing.</li>
- *   <li>{@code insights} and {@code counters} are sent only when they changed since the last snapshot.</li>
+ *   <li>{@code insights}, {@code counters} and {@code codex} are sent only when they changed since the last snapshot.</li>
  *   <li>Every {@code keyframeEveryTicks} a full snapshot goes out regardless, as a heartbeat and resync.</li>
  * </ul>
  * The socket is ordered and lossless (TCP, slow clients are disconnected, never skipped), so the
@@ -34,13 +34,14 @@ public final class SnapshotStream {
         }
         boolean insights = keyframe || !now.insights().equals(last.insights());
         boolean counters = keyframe || !now.counters().equals(last.counters());
+        boolean codex = keyframe || !now.codex().equals(last.codex());
         if (keyframe) {
             lastKeyframeTick = now.tick();
         }
         last = now;
         return new ServerMessage.Snapshot(now.tick(), now.credits(), now.wave(), now.phase(), now.shield(),
                 now.metrics(), now.signals(), insights ? now.insights() : null, counters ? now.counters() : null,
-                now.postmortem());
+                now.postmortem(), codex ? now.codex() : null);
     }
 
     private static boolean sameView(Observation a, Observation b) {
@@ -52,6 +53,7 @@ public final class SnapshotStream {
                 && a.signals().equals(b.signals())
                 && a.insights().equals(b.insights())
                 && a.counters().equals(b.counters())
-                && Objects.equals(a.postmortem(), b.postmortem());
+                && Objects.equals(a.postmortem(), b.postmortem())
+                && a.codex().equals(b.codex());
     }
 }

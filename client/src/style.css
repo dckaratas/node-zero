@@ -141,3 +141,11 @@ dialog.postmortem .options button[data-mark='correct'] { border-color: var(--ok)
 dialog.postmortem .options button[data-mark='wrong'] { border-color: var(--bad); background: #4a1d24; opacity: 1; }
 dialog.postmortem .footer { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 0.9rem; }
 dialog.postmortem .footer p { margin: 0; }
+
+/* Codex (slice 6b) */
+.codex { display: flex; flex-direction: column; gap: 6px; }
+.codex .hint { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.codex details { border: 1px solid var(--line); border-radius: 8px; background: #10172b; padding: 6px 10px; font-size: 0.85rem; }
+.codex summary { cursor: pointer; font-weight: 600; }
+.codex summary:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+.codex details p { margin: 8px 0 4px; color: #b9c4e6; line-height: 1.45; }

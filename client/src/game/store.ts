@@ -12,6 +12,7 @@ export interface View {
   insights: readonly string[];
   counters: readonly InstalledCounter[];
   postmortem: Postmortem | null;
+  codex: readonly string[];
 }
 
 /**
@@ -51,6 +52,7 @@ export class GameStore {
       insights: s.insights ?? base?.insights ?? [],
       counters: s.counters ?? base?.counters ?? [],
       postmortem: s.postmortem ?? null,
+      codex: s.codex ?? base?.codex ?? [],
     };
     this.previous = base ?? view;
     this.latest = view;

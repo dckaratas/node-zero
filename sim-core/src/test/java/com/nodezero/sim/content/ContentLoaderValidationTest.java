@@ -15,6 +15,7 @@ class ContentLoaderValidationTest {
     private static final String THREAT = "threats/test-threat.yaml";
     private static final String COUNTERS = "counters/test.yaml";
     private static final String TR = "i18n/tr.yaml";
+    private static final String CODEX = "codex/test.yaml";
 
     private final Map<String, String> files = validFiles();
 
@@ -113,6 +114,20 @@ class ContentLoaderValidationTest {
     }
 
     @Test
+    void unknownCodexReferenceIsReported() {
+        edit(THREAT, "codex: [utilization-law]", "codex: [utilization-law, magic-law]");
+
+        assertThatThrownBy(this::load).hasMessageContaining("threat test-threat: unknown codex entry 'magic-law'");
+    }
+
+    @Test
+    void codexEntryNothingLinksToIsReported() {
+        edit(CODEX, "codex:\n", "codex:\n  - { id: orphan, title: { en: O, tr: O }, body: { en: O, tr: O } }\n");
+
+        assertThatThrownBy(this::load).hasMessageContaining("codex orphan: not referenced by any threat or counter");
+    }
+
+    @Test
     void missingFileIsReported() {
         files.remove(COUNTERS);
 
@@ -124,6 +139,7 @@ class ContentLoaderValidationTest {
         files.put("index.yaml", """
                 threats: [threats/test-threat.yaml]
                 counters: [counters/test.yaml]
+                codex: [codex/test.yaml]
                 messages: { en: i18n/en.yaml, tr: i18n/tr.yaml }
                 """);
         files.put(THREAT, """
@@ -166,6 +182,12 @@ class ContentLoaderValidationTest {
                     side_effect:
                       - { type: reject_with_status, value: 429 }
                     tradeoff_key: tradeoff.test
+                """);
+        files.put(CODEX, """
+                codex:
+                  - id: utilization-law
+                    title: { en: "Utilization law", tr: "Kullanım yasası" }
+                    body: { en: "U = X S", tr: "U = X S" }
                 """);
         files.put("i18n/en.yaml", """
                 pm.test.q: "Why?"

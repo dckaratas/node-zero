@@ -49,7 +49,8 @@ final class Counters {
         Rules.CounterRules.Variant variant = counter.variant(command.optionId());
         long activeTick = tick + Math.round(variant.applyTimeS() / SimConstants.DT);
         InstalledCounter installed = new InstalledCounter(def.id(), command.optionId(), tick, activeTick);
-        return s.withProgress(p.withCredits(p.credits() - cost).withCounter(installed));
+        // Buying a counter opens its codex entries (decision AB).
+        return s.withProgress(p.withCredits(p.credits() - cost).withCounter(installed).withCodex(def.codex()));
     }
 
     /**

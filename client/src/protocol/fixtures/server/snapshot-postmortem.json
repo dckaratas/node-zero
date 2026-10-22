@@ -27,5 +27,6 @@
     } ],
     "chosen" : null,
     "correct" : null
-  }
+  },
+  "codex" : [ ]
 }
