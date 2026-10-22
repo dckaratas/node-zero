@@ -49,6 +49,14 @@ public sealed interface Command {
         }
     }
 
+    /** Game: the player's answer to the open postmortem (one attempt; ADR-0007). */
+    record AnswerPostmortem(String optionId) implements Command {
+
+        public AnswerPostmortem {
+            Objects.requireNonNull(optionId, "optionId");
+        }
+    }
+
     /** Game: the player gained an insight (e.g. pg-stat-statements) that some counters require. */
     record UnlockInsight(String insightId) implements Command {
 

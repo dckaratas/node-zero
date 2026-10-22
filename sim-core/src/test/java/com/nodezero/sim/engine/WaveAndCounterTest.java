@@ -144,7 +144,8 @@ class WaveAndCounterTest {
         GameState afterStorm = session.runWave();
         assertThat(afterStorm.progress().isThreatActive("log-storm")).isTrue();
 
-        session.at(afterStorm.tick() + 1, new StartWave(3));
+        // The postmortem must be answered before the next wave (slice 6a); same tick, answer first.
+        session.at(afterStorm.tick() + 1, new Command.AnswerPostmortem("b"), new StartWave(3));
         GameState later = session.runUntil(afterStorm.tick() + 300);
 
         // DEBUG logs keep filling the cargo hold during the next wave.
@@ -276,7 +277,7 @@ class WaveAndCounterTest {
         return new Session()
                 .at(1, new StartWave(2))
                 .at(50, new ApplyCounter("log-level-info"))
-                .at(1300, new ApplyCounter("vertical-scale-cpu"), new StartWave(3))
+                .at(1300, new ApplyCounter("vertical-scale-cpu"), new Command.AnswerPostmortem("b"), new StartWave(3))
                 .runUntil(2500);
     }
 }

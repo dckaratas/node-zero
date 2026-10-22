@@ -1,0 +1,31 @@
+{
+  "type" : "snapshot",
+  "tick" : 1200,
+  "credits" : 1300,
+  "wave" : 2,
+  "phase" : "COMPLETE",
+  "shield" : 1.0,
+  "metrics" : { },
+  "signals" : [ ],
+  "insights" : [ ],
+  "counters" : [ ],
+  "postmortem" : {
+    "wave" : 2,
+    "questionKey" : "pm.log_storm.q",
+    "options" : [ {
+      "id" : "a",
+      "key" : "pm.log_storm.disk_too_small"
+    }, {
+      "id" : "b",
+      "key" : "pm.log_storm.wrong_log_level"
+    }, {
+      "id" : "c",
+      "key" : "pm.log_storm.traffic_spike"
+    }, {
+      "id" : "d",
+      "key" : "pm.log_storm.disk_hardware"
+    } ],
+    "chosen" : null,
+    "correct" : null
+  }
+}

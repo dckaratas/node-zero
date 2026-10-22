@@ -7,6 +7,7 @@ import com.nodezero.sim.model.UtilizationState;
 import com.nodezero.sim.state.ActiveThreat;
 import com.nodezero.sim.state.GameState;
 import com.nodezero.sim.state.InstalledCounter;
+import com.nodezero.sim.state.PostmortemState;
 import com.nodezero.sim.state.Progress;
 import com.nodezero.sim.state.ResourceId;
 import com.nodezero.sim.state.WaveState;
@@ -31,6 +32,11 @@ final class Waves {
         if (p.wave().phase() == WaveState.Phase.RUNNING) {
             throw new IllegalArgumentException("wave " + p.wave().number() + " is still running");
         }
+        if (p.postmortem() != null && !p.postmortem().answered()) {
+            throw new IllegalArgumentException(
+                    "answer the postmortem of wave " + p.postmortem().wave() + " before starting the next wave");
+        }
+        p = p.withPostmortem(null);
         GameBalance balance = rules.balance();
         ThreatDef threat = rules.threatForWave(number);
         double duration = threat == null ? balance.quietWaveSeconds() : TrafficShape.durationS(threat.traffic());
@@ -71,7 +77,7 @@ final class Waves {
         WaveState booked = wave.record(
                 plan.arrivalsRps() * SimConstants.DT, failedRps * SimConstants.DT, failedRps, tick);
         if (balance.endWaveOnEmptyShield() && booked.shield(balance.slo()) <= 0) {
-            return s.withProgress(p.withWave(booked.in(WaveState.Phase.FAILED)));
+            return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.FAILED))));
         }
         if ((tick - wave.startTick() + 1) * SimConstants.DT >= wave.durationS() - 1e-9) {
             return complete(s, p, booked);
@@ -93,9 +99,41 @@ final class Waves {
                 remaining.add(t);
             }
         }
-        return s.withProgress(p.withWave(booked.in(WaveState.Phase.COMPLETE))
+        return s.withProgress(review(p.withWave(booked.in(WaveState.Phase.COMPLETE)))
                 .withCredits(p.credits() + reward - upkeep)
                 .withActiveThreats(remaining));
+    }
+
+    /** The player's one answer to the open postmortem; the right root cause earns the bonus (decision AA). */
+    GameState answer(GameState s, String optionId) {
+        Progress p = s.progress();
+        PostmortemState pm = p.postmortem();
+        if (pm == null) {
+            throw new IllegalArgumentException("no postmortem to answer");
+        }
+        if (pm.answered()) {
+            throw new IllegalArgumentException("postmortem of wave " + pm.wave() + " is already answered");
+        }
+        ThreatDef.Option chosen = null;
+        for (ThreatDef.Option o : rules.content().threat(pm.threatId()).postmortem().options()) {
+            if (o.id().equals(optionId)) {
+                chosen = o;
+            }
+        }
+        if (chosen == null) {
+            throw new IllegalArgumentException("unknown postmortem option: " + optionId);
+        }
+        int bonus = chosen.correct() ? rules.balance().postmortemBonus() : 0;
+        return s.withProgress(p.withPostmortem(pm.answer(optionId)).withCredits(p.credits() + bonus));
+    }
+
+    /** A threat wave that just ended opens its postmortem, unless that threat was already reviewed. */
+    private Progress review(Progress ended) {
+        ThreatDef threat = rules.threatForWave(ended.wave().number());
+        if (threat == null || ended.reviewedThreats().contains(threat.id())) {
+            return ended;
+        }
+        return ended.withPostmortem(new PostmortemState(threat.id(), ended.wave().number(), null));
     }
 
     private static OccupancyState occupancy(GameState s, ResourceId id) {

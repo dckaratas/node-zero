@@ -55,6 +55,7 @@ public final class Game {
             switch (command) {
                 case Command.StartWave start -> s = waves.start(s, start.number(), tick);
                 case Command.ApplyCounter apply -> s = counters.apply(s, apply, tick);
+                case Command.AnswerPostmortem answer -> s = waves.answer(s, answer.optionId());
                 case Command.UnlockInsight unlock -> s = s.withProgress(s.progress().withInsight(unlock.insightId()));
                 case Command.Noop noop -> { }
                 case Command.SetArrivalRate c -> resourceCommands = append(resourceCommands, c);

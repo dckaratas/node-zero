@@ -14,7 +14,7 @@ const fixture = (n: string): unknown => JSON.parse(serverFixtures[`./fixtures/se
 describe('server → client contract', () => {
   it('has a fixture for every message type', () => {
     expect(Object.keys(serverFixtures).map(name).sort()).toEqual(
-      ['catalog', 'error', 'paused', 'rejected', 'snapshot-delta', 'snapshot-keyframe', 'welcome']);
+      ['catalog', 'error', 'paused', 'rejected', 'snapshot-delta', 'snapshot-keyframe', 'snapshot-postmortem', 'welcome']);
   });
 
   for (const path of Object.keys(serverFixtures).filter((p) => name(p) !== 'catalog')) {
@@ -43,6 +43,14 @@ describe('server → client contract', () => {
     expect(catalog.counters[0]?.requiresInsight).toBeNull();
   });
 
+  it('sends the postmortem question without its answer', () => {
+    const s = parseServerMessage(fixture('snapshot-postmortem'));
+    const pm = s.type === 'snapshot' ? s.postmortem : undefined;
+    expect(pm?.questionKey).toBe('pm.log_storm.q');
+    expect(pm?.options).toHaveLength(4);
+    expect(pm?.correct).toBeNull();
+  });
+
   it('keeps the 64-bit seed exact', () => {
     const big = { ...(fixture('welcome') as Record<string, unknown>), seed: '-7046029254386353131' };
     const welcome = parseServerMessage(big);
@@ -54,6 +62,7 @@ describe('client → server contract', () => {
   const actions: Record<string, ClientAction> = {
     'start-wave': { type: 'start_wave', wave: 1 },
     'apply-counter': { type: 'apply_counter', counter: 'create-index', option: 'concurrently' },
+    'answer-postmortem': { type: 'answer_postmortem', option: 'b' },
     pause: { type: 'pause' },
     resume: { type: 'resume' },
   };

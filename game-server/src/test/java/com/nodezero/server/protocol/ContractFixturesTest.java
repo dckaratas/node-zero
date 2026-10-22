@@ -8,6 +8,7 @@ import com.nodezero.sim.engine.Game;
 import com.nodezero.sim.engine.GameBalance;
 import com.nodezero.sim.engine.Observation;
 import com.nodezero.sim.state.GameState;
+import com.nodezero.sim.state.WaveState;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -53,11 +54,21 @@ class ContractFixturesTest {
         messages.put("welcome", new ServerMessage.Welcome("3f2b9c1e-0000-4000-8000-000000000001", 42, 10, 5));
         messages.put("snapshot-keyframe", keyframe);
         messages.put("snapshot-delta", delta);
+        messages.put("snapshot-postmortem", ServerMessage.Snapshot.full(game.observe(afterLogStorm(game))));
         messages.put("rejected", new ServerMessage.Rejected(new ClientMessage.ApplyCounter("grafana", null),
                 "grafana needs prometheus installed first"));
         messages.put("paused", new ServerMessage.Paused(true));
         messages.put("error", new ServerMessage.Error("cannot read message: Unexpected character"));
         return messages;
+    }
+
+    /** No monitoring, wave 2 (log-storm) played out: the postmortem is open and its answer hidden. */
+    private static GameState afterLogStorm(Game game) {
+        GameState s = game.step(game.newState(7), List.of(new Command.StartWave(2)), 1);
+        while (s.wave().phase() == WaveState.Phase.RUNNING) {
+            s = game.step(s, List.of(), s.tick() + 1);
+        }
+        return s;
     }
 
     @Test
@@ -112,6 +123,7 @@ class ContractFixturesTest {
         expected.put("apply-counter", new ClientMessage.ApplyCounter("create-index", "concurrently"));
         expected.put("pause", new ClientMessage.Pause());
         expected.put("resume", new ClientMessage.Resume());
+        expected.put("answer-postmortem", new ClientMessage.AnswerPostmortem("b"));
 
         for (Map.Entry<String, ClientMessage> e : expected.entrySet()) {
             Path file = FIXTURES.resolve("client").resolve(e.getKey() + ".json");

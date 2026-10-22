@@ -1,4 +1,4 @@
-import type { InstalledCounter, Phase, Snapshot } from '../protocol/messages';
+import type { InstalledCounter, Phase, Postmortem, Snapshot } from '../protocol/messages';
 
 /** A complete view: snapshot deltas merged onto what the client already knows. */
 export interface View {
@@ -11,6 +11,7 @@ export interface View {
   signals: readonly string[];
   insights: readonly string[];
   counters: readonly InstalledCounter[];
+  postmortem: Postmortem | null;
 }
 
 /**
@@ -49,6 +50,7 @@ export class GameStore {
       signals: s.signals,
       insights: s.insights ?? base?.insights ?? [],
       counters: s.counters ?? base?.counters ?? [],
+      postmortem: s.postmortem ?? null,
     };
     this.previous = base ?? view;
     this.latest = view;

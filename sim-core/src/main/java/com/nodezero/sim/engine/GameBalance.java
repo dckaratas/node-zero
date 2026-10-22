@@ -9,6 +9,7 @@ package com.nodezero.sim.engine;
  * @param waveReward credits for a wave survived with a full shield, scaled by the shield left
  * @param quietWaveSeconds length of a wave that brings no threat
  * @param endWaveOnEmptyShield false for practice: the wave plays out even with an empty shield
+ * @param postmortemBonus credits for naming the right root cause in a postmortem (decision AA)
  */
 public record GameBalance(
         int startCredits,
@@ -16,10 +17,11 @@ public record GameBalance(
         double latencySloMs,
         int waveReward,
         double quietWaveSeconds,
-        boolean endWaveOnEmptyShield) {
+        boolean endWaveOnEmptyShield,
+        int postmortemBonus) {
 
-    public static final GameBalance DEFAULT = new GameBalance(1000, 0.99, 500, 300, 60, true);
+    public static final GameBalance DEFAULT = new GameBalance(1000, 0.99, 500, 300, 60, true, 100);
 
     /** Waves never fail early; used to study the station's behaviour under a whole wave. */
-    public static final GameBalance PRACTICE = new GameBalance(1000, 0.99, 500, 300, 60, false);
+    public static final GameBalance PRACTICE = new GameBalance(1000, 0.99, 500, 300, 60, false, 100);
 }

@@ -33,7 +33,8 @@ public sealed interface ServerMessage {
     /**
      * The player's fog-of-war view ({@link Observation}), flattened. Sent only when something changed
      * ({@link SnapshotStream}); {@code insights} and {@code counters} are omitted (null) when unchanged
-     * since the previous snapshot, so the client keeps its last copy.
+     * since the previous snapshot, so the client keeps its last copy. {@code postmortem} is sent whenever
+     * one is open or just answered, and absent otherwise.
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record Snapshot(
@@ -45,12 +46,13 @@ public sealed interface ServerMessage {
             Map<String, Double> metrics,
             List<String> signals,
             List<String> insights,
-            List<Observation.Counter> counters) implements ServerMessage {
+            List<Observation.Counter> counters,
+            Observation.Postmortem postmortem) implements ServerMessage {
 
         /** Every field present: a keyframe. */
         public static Snapshot full(Observation o) {
             return new Snapshot(o.tick(), o.credits(), o.wave(), o.phase(), o.shield(),
-                    o.metrics(), o.signals(), o.insights(), o.counters());
+                    o.metrics(), o.signals(), o.insights(), o.counters(), o.postmortem());
         }
     }
 

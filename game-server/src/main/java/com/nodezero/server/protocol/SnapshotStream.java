@@ -1,6 +1,7 @@
 package com.nodezero.server.protocol;
 
 import com.nodezero.sim.engine.Observation;
+import java.util.Objects;
 
 /**
  * Turns one session's observations into the snapshots worth sending (ADR-0015 addendum, decision T).
@@ -38,7 +39,8 @@ public final class SnapshotStream {
         }
         last = now;
         return new ServerMessage.Snapshot(now.tick(), now.credits(), now.wave(), now.phase(), now.shield(),
-                now.metrics(), now.signals(), insights ? now.insights() : null, counters ? now.counters() : null);
+                now.metrics(), now.signals(), insights ? now.insights() : null, counters ? now.counters() : null,
+                now.postmortem());
     }
 
     private static boolean sameView(Observation a, Observation b) {
@@ -49,6 +51,7 @@ public final class SnapshotStream {
                 && a.metrics().equals(b.metrics())
                 && a.signals().equals(b.signals())
                 && a.insights().equals(b.insights())
-                && a.counters().equals(b.counters());
+                && a.counters().equals(b.counters())
+                && Objects.equals(a.postmortem(), b.postmortem());
     }
 }

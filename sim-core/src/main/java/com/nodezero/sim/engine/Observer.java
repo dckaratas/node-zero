@@ -3,6 +3,7 @@ package com.nodezero.sim.engine;
 import com.nodezero.sim.content.ThreatDef;
 import com.nodezero.sim.state.GameState;
 import com.nodezero.sim.state.InstalledCounter;
+import com.nodezero.sim.state.PostmortemState;
 import com.nodezero.sim.state.Progress;
 import com.nodezero.sim.state.WaveState;
 import java.util.ArrayList;
@@ -51,7 +52,25 @@ final class Observer {
         List<Observation.Counter> counters = new ArrayList<>();
         p.counters().forEach(c -> counters.add(new Observation.Counter(c.id(), c.option(), c.activeTick())));
         return new Observation(s.tick(), p.credits(), wave.number(), wave.phase(),
-                wave.shield(rules.balance().slo()), metrics, signals, p.insights(), counters);
+                wave.shield(rules.balance().slo()), metrics, signals, p.insights(), counters, postmortem(p));
+    }
+
+    private Observation.Postmortem postmortem(Progress p) {
+        PostmortemState pm = p.postmortem();
+        if (pm == null) {
+            return null;
+        }
+        ThreatDef.Postmortem def = rules.content().threat(pm.threatId()).postmortem();
+        List<Observation.Choice> options = new ArrayList<>();
+        String correct = null;
+        for (ThreatDef.Option o : def.options()) {
+            options.add(new Observation.Choice(o.id(), o.key()));
+            if (o.correct()) {
+                correct = o.id();
+            }
+        }
+        return new Observation.Postmortem(pm.wave(), def.questionKey(), options, pm.chosenOption(),
+                pm.answered() ? correct : null);
     }
 
     private Modules modules(Progress p, long tick) {

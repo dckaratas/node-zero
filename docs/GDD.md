@@ -39,6 +39,8 @@ Web tabanlı, eğitici bir **bilim kurgu tower defense + sunucu tasarım/yöneti
 | 13 | Gecikme formülü | Erlang-C (M/M/c) + ρ ≥ 1'de kuyruk boşalma süresi | [0013](adr/0013-latency-approximation.md) |
 | 14 | Performans | Tick < 20 µs/oturum, JMH ile ölçülür | [0014](adr/0014-performance-budget.md) |
 | 15 | Oyun sunucusu | Bellekte oturum + replay günlüğü, çekirdek başına tick shard'ı, ham WebSocket + JSON | [0015](adr/0015-game-server-architecture.md) |
+| 16 | İstemci | Vite + TS + PixiJS, sözleşme fixture'ları, sunucuda filtrelenen katalog | [0016](adr/0016-browser-client.md) |
+| 17 | Postmortem/kodeks/i18n | Zorunlu tek denemelik postmortem, sunucuda açılan kodeks, public i18n paketi | [0017](adr/0017-postmortem-codex-i18n.md) |
 
 ## 3. Oyun döngüsü
 ```
@@ -56,6 +58,7 @@ Hazırlık ──► Dalga ──► Postmortem ──► Araştırma ──┐
 | Başarısız istek | Ret (Tomcat, Hikari, CPU kuyruğu) + 429 + kesinti + statement timeout + yazma kilidi + dolu diskte yazma + **gecikmesi > 500 ms olan istekler** |
 | Dalga sonu | Trafik şekli bitince `COMPLETE`; kalkan sıfırlanırsa `FAILED` (ödül yok) |
 | Ödül | `round(300 × kalan kalkan) − kurulu karşı aksiyonların upkeep toplamı` |
+| Postmortem (Dilim 6a) | Tehditli dalga bitince (COMPLETE/FAILED) açılır; cevaplanmadan sonraki dalga başlamaz; tek deneme, tehdit başına bir kez; doğru → +100 kr; cevap önceden gönderilmez (ADR-0017) |
 | Kalıcı tehditler | `persists: true` olanlar (DEBUG log, büyüyen tablo, günlük job) sonraki dalgalarda da etkili: teknik borç |
 | Karşı aksiyon zamanlaması | Kurulum süresince geçiş yan etkileri (kesinti, yazma kilidi, ek I/O); sonra etkin. Hazırlıkta kurmak ucuzdur |
 | Teşhis (insight) | `requires_insight` olan aksiyonlar ancak teşhis açıldıktan sonra alınır (ör. `pg-stat-statements`) |

@@ -7,6 +7,7 @@ export type Phase = 'PREPARATION' | 'RUNNING' | 'COMPLETE' | 'FAILED';
 export type ClientAction =
   | { type: 'start_wave'; wave: number }
   | { type: 'apply_counter'; counter: string; option?: string }
+  | { type: 'answer_postmortem'; option: string }
   | { type: 'pause' }
   | { type: 'resume' };
 
@@ -33,6 +34,17 @@ export interface Snapshot {
   signals: string[];
   insights?: string[];
   counters?: InstalledCounter[];
+  /** Present while a postmortem is open or just answered; absent otherwise (not a delta field). */
+  postmortem?: Postmortem;
+}
+
+/** Root-cause question after a threat wave. Texts are i18n keys; `correct` is null until answered. */
+export interface Postmortem {
+  wave: number;
+  questionKey: string;
+  options: { id: string; key: string }[];
+  chosen: string | null;
+  correct: string | null;
 }
 
 /** A bought counter; it works from readyTick on and is being built before that. */
@@ -144,6 +156,24 @@ function installed(v: unknown, path: string): InstalledCounter {
     readyTick: num(o['readyTick'], `${path}.readyTick`) };
 }
 
+function choice(v: unknown, path: string): { id: string; key: string } {
+  const o = object(v, path);
+  keys(o, path, ['id', 'key']);
+  return { id: str(o['id'], `${path}.id`), key: str(o['key'], `${path}.key`) };
+}
+
+function postmortem(v: unknown, path: string): Postmortem {
+  const o = object(v, path);
+  keys(o, path, ['wave', 'questionKey', 'options', 'chosen', 'correct']);
+  return {
+    wave: num(o['wave'], `${path}.wave`),
+    questionKey: str(o['questionKey'], `${path}.questionKey`),
+    options: list(o['options'], `${path}.options`, choice),
+    chosen: nullable(o['chosen'], `${path}.chosen`, str),
+    correct: nullable(o['correct'], `${path}.correct`, str),
+  };
+}
+
 function catalogOption(v: unknown, path: string): CatalogOption {
   const o = object(v, path);
   keys(o, path, ['id', 'name', 'applyTimeS', 'tradeoff']);
@@ -188,6 +218,9 @@ export function parseAction(v: unknown, path = 'action'): ClientAction {
       if (o['option'] !== undefined && o['option'] !== null) action.option = str(o['option'], `${path}.option`);
       return action;
     }
+    case 'answer_postmortem':
+      keys(o, path, ['type', 'option']);
+      return { type: 'answer_postmortem', option: str(o['option'], `${path}.option`) };
     case 'pause':
     case 'resume':
       keys(o, path, ['type']);
@@ -211,7 +244,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       };
     case 'snapshot': {
       keys(o, 'snapshot', ['type', 'tick', 'credits', 'wave', 'phase', 'shield', 'metrics', 'signals'],
-        ['insights', 'counters']);
+        ['insights', 'counters', 'postmortem']);
       const phase = str(o['phase'], 'snapshot.phase');
       if (!PHASES.includes(phase)) throw new ProtocolError(`snapshot.phase: unknown ${phase}`);
       const s: Snapshot = {
@@ -226,6 +259,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       };
       if (o['insights'] !== undefined) s.insights = strings(o['insights'], 'snapshot.insights');
       if (o['counters'] !== undefined) s.counters = list(o['counters'], 'snapshot.counters', installed);
+      if (o['postmortem'] !== undefined) s.postmortem = postmortem(o['postmortem'], 'snapshot.postmortem');
       return s;
     }
     case 'rejected':

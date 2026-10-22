@@ -57,7 +57,9 @@ export class Hud {
     // A failed wave is retried; otherwise the next one.
     this.nextWave = view.phase === 'FAILED' ? Math.max(1, view.wave) : view.wave + 1;
     this.startWave.textContent = `Start wave ${this.nextWave}`;
-    this.startWave.disabled = view.phase === 'RUNNING';
+    const reviewOpen = view.postmortem !== null && view.postmortem.chosen === null;
+    this.startWave.disabled = view.phase === 'RUNNING' || reviewOpen;
+    this.startWave.title = reviewOpen ? 'Answer the postmortem first' : '';
 
     this.renderMetrics(view.metrics);
     this.renderSignals(view.signals);

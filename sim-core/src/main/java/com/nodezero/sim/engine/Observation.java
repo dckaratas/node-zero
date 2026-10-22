@@ -16,6 +16,7 @@ import java.util.Map;
  * @param signals what users report without any monitoring, e.g. {@code user_complaints}
  * @param insights diagnostic capabilities gained (e.g. {@code pg-stat-statements})
  * @param counters installed counters in purchase order, including ones still being built
+ * @param postmortem the open or just-answered postmortem, or {@code null}
  */
 public record Observation(
         long tick,
@@ -26,7 +27,23 @@ public record Observation(
         Map<String, Double> metrics,
         List<String> signals,
         List<String> insights,
-        List<Counter> counters) {
+        List<Counter> counters,
+        Postmortem postmortem) {
+
+    /**
+     * A root-cause question after a threat wave (ADR-0007/0008). Texts are keys (ADR-0009).
+     * {@code correct} stays {@code null} until the player has answered: the server never sends the
+     * answer ahead (fog of war, decision Z).
+     */
+    public record Postmortem(int wave, String questionKey, List<Choice> options, String chosen, String correct) {
+
+        public Postmortem {
+            options = List.copyOf(options);
+        }
+    }
+
+    /** One answer option; {@code key} is its text key. */
+    public record Choice(String id, String key) {}
 
     /**
      * An installed counter as the player sees it. It works from {@code readyTick} on; before that it is

@@ -13,6 +13,7 @@ import com.nodezero.sim.engine.Command;
 @JsonSubTypes({
     @JsonSubTypes.Type(value = ClientMessage.StartWave.class, name = "start_wave"),
     @JsonSubTypes.Type(value = ClientMessage.ApplyCounter.class, name = "apply_counter"),
+    @JsonSubTypes.Type(value = ClientMessage.AnswerPostmortem.class, name = "answer_postmortem"),
     @JsonSubTypes.Type(value = ClientMessage.Pause.class, name = "pause"),
     @JsonSubTypes.Type(value = ClientMessage.Resume.class, name = "resume")
 })
@@ -21,6 +22,9 @@ public sealed interface ClientMessage {
     record StartWave(int wave) implements ClientMessage {}
 
     record ApplyCounter(String counter, String option) implements ClientMessage {}
+
+    /** The root cause the player picks in the open postmortem; one attempt. */
+    record AnswerPostmortem(String option) implements ClientMessage {}
 
     record Pause() implements ClientMessage {}
 
@@ -31,6 +35,7 @@ public sealed interface ClientMessage {
         return switch (message) {
             case StartWave m -> new Command.StartWave(m.wave());
             case ApplyCounter m -> new Command.ApplyCounter(m.counter(), m.option());
+            case AnswerPostmortem m -> new Command.AnswerPostmortem(m.option());
             case Pause m -> null;
             case Resume m -> null;
         };
@@ -41,6 +46,7 @@ public sealed interface ClientMessage {
         return switch (command) {
             case Command.StartWave c -> new StartWave(c.number());
             case Command.ApplyCounter c -> new ApplyCounter(c.counterId(), c.optionId());
+            case Command.AnswerPostmortem c -> new AnswerPostmortem(c.optionId());
             case Command.Noop c -> throw notAPlayerAction(c);
             case Command.SetArrivalRate c -> throw notAPlayerAction(c);
             case Command.SetHoldTime c -> throw notAPlayerAction(c);

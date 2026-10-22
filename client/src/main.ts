@@ -1,11 +1,14 @@
 import './style.css';
 import { Orders } from './game/orders';
+import { Review } from './game/postmortem';
 import { GameStore } from './game/store';
 import { CounterPanel } from './hud/counterPanel';
 import { Hud } from './hud/hud';
+import { PostmortemDialog } from './hud/postmortemDialog';
 import { StationMap } from './map/stationMap';
 import { CatalogLoader } from './net/catalog';
 import { Connection } from './net/connection';
+import { Texts } from './net/i18n';
 import type { ClientAction } from './protocol/messages';
 
 function byId(id: string): HTMLElement {
@@ -16,6 +19,8 @@ function byId(id: string): HTMLElement {
 
 const store = new GameStore(200);
 const orders = new Orders();
+const review = new Review();
+const texts = new Texts();
 const map = new StationMap();
 await map.mount(byId('map'));
 
@@ -33,6 +38,7 @@ const connection = new Connection(Connection.defaultUrl(), {
         store.reset();
         store.setSnapshotRate(message.snapshotHz);
         orders.clear();
+        review.reset();
         panel.reset();
         catalog.load(session);
         hud.setPaused(false);
@@ -54,6 +60,7 @@ const connection = new Connection(Connection.defaultUrl(), {
         break;
       case 'rejected':
         // A refused purchase shows on its card; anything else goes to the notice line.
+        if (message.action.type === 'answer_postmortem') review.rejected();
         if (!orders.reject(message.action, message.reason)) hud.showNotice(`Rejected: ${message.reason}`);
         break;
       case 'error':
@@ -83,14 +90,23 @@ const catalog = new CatalogLoader((c) => panel.setCatalog(c), (e: unknown) => {
   hud.showNotice('Could not load the module catalog');
 });
 
+const postmortem = new PostmortemDialog(review, texts, (wave, option) => {
+  if (send({ type: 'answer_postmortem', option })) review.sent(wave, option);
+});
+
 map.ticker.add((ticker) => {
   const view = store.sample(performance.now());
   map.render(view, ticker.deltaMS);
   hud.render(view, view === undefined || !orders.hasPending() ? undefined : orders.projectedCredits(view));
   panel.render(store.current());
+  postmortem.render(store.current()?.postmortem ?? null);
 });
 
-connection.connect();
+// Content language selection arrives in slice 6c; until then content is shown in English.
+texts.load('en').catch((e: unknown) => {
+  console.error(e);
+  hud.showNotice('Could not load texts');
+}).finally(() => connection.connect());
 
 // Dev only: send raw actions from the console, e.g. nodezero.send({ type: 'start_wave', wave: 2 })
 if (import.meta.env.DEV) {

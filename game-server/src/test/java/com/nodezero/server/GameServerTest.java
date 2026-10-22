@@ -144,6 +144,32 @@ class GameServerTest {
     }
 
     @Test
+    void i18nBundleServesOnlyTextsThatGiveNothingAway() throws Exception {
+        HttpClient http = HttpClient.newHttpClient();
+        HttpResponse<String> tr = http.send(HttpRequest.newBuilder(URI.create(
+                "http://localhost:" + port + "/api/i18n/tr")).build(), HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> unknown = http.send(HttpRequest.newBuilder(URI.create(
+                "http://localhost:" + port + "/api/i18n/xx")).build(), HttpResponse.BodyHandlers.ofString());
+
+        assertThat(tr.statusCode()).isEqualTo(200);
+        JsonNode bundle = json.readTree(tr.body());
+        assertThat(bundle.path("pm.log_storm.q").asString()).isNotBlank();
+        assertThat(tr.body()).doesNotContain("tradeoff.");
+        assertThat(tr.headers().firstValue("ETag")).isPresent();
+        assertThat(unknown.statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void postmortemAnswersTravelOverTheSocket() throws Exception {
+        connect();
+        await(type("welcome"));
+
+        send("{\"type\":\"answer_postmortem\",\"option\":\"b\"}");
+
+        assertThat(await(type("rejected")).path("reason").asString()).contains("no postmortem to answer");
+    }
+
+    @Test
     void replayLogAndMetricsAreServedOverHttp() throws Exception {
         connect();
         String session = await(type("welcome")).path("session").asString();
