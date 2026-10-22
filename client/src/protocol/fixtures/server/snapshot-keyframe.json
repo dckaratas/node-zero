@@ -48,5 +48,13 @@
     "forS" : 10.0,
     "pendingSinceTick" : -1,
     "firingSinceTick" : -1
-  } ]
+  } ],
+  "station" : {
+    "cpuCores" : 4,
+    "threads" : 200,
+    "dbPool" : 10,
+    "diskMb" : 100.0,
+    "dbCpuCores" : 4,
+    "dbIoDisks" : 1
+  }
 }

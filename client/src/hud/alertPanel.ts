@@ -16,7 +16,7 @@ export class AlertPanel {
   private readonly forS = document.createElement('input');
   private readonly hint = document.createElement('p');
   private listKey = '';
-  private metricsKey = '';
+  private metricsKey: string | undefined;
 
   constructor(host: HTMLElement, private readonly send: (action: ClientAction) => boolean) {
     this.list.className = 'alert-rules';
@@ -50,6 +50,13 @@ export class AlertPanel {
     this.hint.className = 'hint';
     this.hint.textContent = 'Install Prometheus to alert on metrics.';
     host.append(this.list, this.form, this.hint);
+  }
+
+  /** "Alert on this" from the inspector: pick the metric and put the cursor in the threshold. */
+  prefill(metric: string): void {
+    this.metric.value = metric;
+    this.form.scrollIntoView({ block: 'nearest' });
+    this.threshold.focus();
   }
 
   render(view: View | undefined): void {

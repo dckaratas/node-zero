@@ -3,6 +3,8 @@ import { loadLanguage, saveLanguage, type ContentLanguage } from './game/languag
 import { Orders } from './game/orders';
 import { Review } from './game/postmortem';
 import { firingNodes } from './game/alerts';
+import { LoadHistory } from './game/history';
+import { nodeById } from './game/station';
 import { shieldAlert } from './game/shield';
 import { GameStore } from './game/store';
 import { ActionPanel } from './hud/actionPanel';
@@ -11,6 +13,7 @@ import { AlertPanel } from './hud/alertPanel';
 import { ChapterDialog } from './hud/chapterDialog';
 import { CodexPanel } from './hud/codexPanel';
 import { CounterPanel } from './hud/counterPanel';
+import { Inspector } from './hud/inspector';
 import { Hud } from './hud/hud';
 import { PostmortemDialog } from './hud/postmortemDialog';
 import { ShieldAlerts } from './hud/shieldAlerts';
@@ -30,6 +33,9 @@ const store = new GameStore(200);
 const orders = new Orders();
 const review = new Review();
 const texts = new Texts();
+// One minute of load per node at the snapshot rate (5 Hz).
+const history = new LoadHistory(300);
+let moduleNames = new Map<string, string>();
 const map = new StationMap();
 await map.mount(byId('map'));
 
@@ -50,6 +56,7 @@ const connection = new Connection(Connection.defaultUrl(), {
         store.reset();
         store.setSnapshotRate(message.snapshotHz);
         orders.clear();
+        history.clear();
         review.reset();
         panel.reset();
         actionPanel.reset();
@@ -62,6 +69,7 @@ const connection = new Connection(Connection.defaultUrl(), {
       case 'snapshot': {
         const before = store.current();
         const view = store.apply(message, performance.now());
+        history.record(view);
         // Threshold toasts and the collapse notice (decision AD); compared on raw views, not blended ones.
         const alert = shieldAlert(before, view);
         if (alert !== null) shieldAlerts.show(alert, view.wave, performance.now());
@@ -118,6 +126,7 @@ const actionPanel = new ActionPanel(hud.actionsHost, (action, option) => {
 const catalog = new SessionResource('catalog', parseCatalog, (c) => {
   panel.setCatalog(c);
   actionPanel.setCatalog(c);
+  moduleNames = new Map(c.counters.map((item) => [item.id, item.name]));
   hud.setCrewMax(c.crewPerShift);
 }, (e: unknown) => {
   console.error(e);
@@ -134,6 +143,12 @@ const postmortem = new PostmortemDialog(review, texts, (wave, option) => {
 });
 const alertPanel = new AlertPanel(hud.alertsHost, send);
 const alertBanner = new AlertBanner();
+const inspector = new Inspector(byId('panel'), history, () => moduleNames, (metric) => alertPanel.prefill(metric),
+  () => map.select(null));
+map.onNodeSelected((id) => {
+  inspector.show(id);
+  panel.setFilter(id, id === null ? '' : nodeById(id)?.label ?? id);
+});
 const shieldAlerts = new ShieldAlerts(() => document.querySelector<HTMLElement>('.hud .shield'));
 const chapter = new ChapterDialog();
 
@@ -145,6 +160,7 @@ map.ticker.add((ticker) => {
   panel.render(store.current());
   actionPanel.render(store.current());
   alertPanel.render(store.current());
+  inspector.render(store.current());
   alertBanner.render(store.current()?.alerts ?? []);
   const latest = store.current();
   // The collapse notice comes first; the summary waits until the last postmortem is closed.

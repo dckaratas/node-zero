@@ -1,8 +1,12 @@
 package com.nodezero.sim.engine;
 
 import com.nodezero.sim.content.ThreatDef;
+import com.nodezero.sim.model.FillModel;
+import com.nodezero.sim.model.OccupancyModel;
+import com.nodezero.sim.model.UtilizationModel;
 import com.nodezero.sim.state.GameState;
 import com.nodezero.sim.state.PostmortemState;
+import com.nodezero.sim.state.ResourceId;
 import com.nodezero.sim.state.Progress;
 import com.nodezero.sim.state.WaveState;
 import java.util.ArrayList;
@@ -68,7 +72,17 @@ final class Observer {
                 p.postmortem());
         return new Observation(s.tick(), p.credits(), wave.number(), wave.phase(), shield, burnRate, emptyInS,
                 metrics, signals, p.insights(), counters, postmortem(p), p.codex(), p.results(), chapter,
-                p.ops().crew(), p.ops().runs(), p.ops().alerts());
+                p.ops().crew(), p.ops().runs(), p.ops().alerts(), station(s));
+    }
+
+    private static Observation.Station station(GameState s) {
+        return new Observation.Station(
+                ((UtilizationModel) s.resource(ResourceId.CPU).model()).servers(),
+                ((OccupancyModel) s.resource(ResourceId.THREADS).model()).poolSize(),
+                ((OccupancyModel) s.resource(ResourceId.DB_POOL).model()).poolSize(),
+                ((FillModel) s.resource(ResourceId.DISK).model()).capacity(),
+                ((UtilizationModel) s.resource(ResourceId.DB_CPU).model()).servers(),
+                ((UtilizationModel) s.resource(ResourceId.DB_IO).model()).servers());
     }
 
     private Observation.Postmortem postmortem(Progress p) {

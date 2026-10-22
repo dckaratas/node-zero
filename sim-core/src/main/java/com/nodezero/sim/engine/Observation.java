@@ -29,6 +29,7 @@ import java.util.Map;
  * @param crew crew points left in this shift (slice 7b)
  * @param actions latest run of each incident action used, with its cooldown
  * @param alerts the player's alert rules with their state (slice 7d)
+ * @param station the station's capacities (slice 8a): the player's own hardware, so never hidden by the fog
  */
 public record Observation(
         long tick,
@@ -48,7 +49,8 @@ public record Observation(
         Chapter chapter,
         int crew,
         List<ActionRun> actions,
-        List<AlertRule> alerts) {
+        List<AlertRule> alerts,
+        Station station) {
 
     /**
      * A root-cause question after a threat wave (ADR-0007/0008). Texts are keys (ADR-0009).
@@ -67,6 +69,12 @@ public record Observation(
      * One star for finishing, one for an average shield of at least half, one for every root cause right.
      */
     public record Chapter(int number, int stars, double averageShield, int postmortemsRight, int postmortems) {}
+
+    /**
+     * What NODE-01 is built of right now; structural counters change it (more cores, threads, a bigger disk).
+     * Lets the map show load against the real capacity instead of a constant in the client.
+     */
+    public record Station(int cpuCores, int threads, int dbPool, double diskMb, int dbCpuCores, int dbIoDisks) {}
 
     /** One answer option; {@code key} is its text key. */
     public record Choice(String id, String key) {}

@@ -37,9 +37,9 @@ const NODE_OF_METRIC: Readonly<Record<string, string>> = {
   traffic_heatmap: 'gateway',
   cpu_utilization: 'cpu',
   tomcat_threads_busy: 'threads',
-  hikaricp_connections_active: 'pool',
-  hikaricp_connections_pending: 'pool',
-  slow_queries: 'pool',
+  hikaricp_connections_active: 'db_pool',
+  hikaricp_connections_pending: 'db_pool',
+  slow_queries: 'db_pool',
   disk_usage_ratio: 'disk',
   disk_fill_rate: 'disk',
   disk_forecast: 'disk',
@@ -47,10 +47,14 @@ const NODE_OF_METRIC: Readonly<Record<string, string>> = {
   db_io_utilization: 'db_io',
 };
 
+export function nodeOfMetric(metric: string): string | undefined {
+  return NODE_OF_METRIC[metric];
+}
+
 export function firingNodes(rules: readonly AlertRule[]): Set<string> {
   const nodes = new Set<string>();
   for (const r of rules) {
-    const node = NODE_OF_METRIC[r.metric];
+    const node = nodeOfMetric(r.metric);
     if (alertStatus(r) === 'firing' && node !== undefined) nodes.add(node);
   }
   return nodes;

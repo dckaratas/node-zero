@@ -15,7 +15,8 @@
     "tradeoff" : "Lifts the fog: raw metrics for CPU, threads, pools and disk. Costs upkeep every wave.",
     "options" : [ ],
     "removable" : true,
-    "setting" : null
+    "setting" : null,
+    "nodes" : [ ]
   }, {
     "id" : "grafana",
     "name" : "Command Display",
@@ -30,7 +31,8 @@
     "tradeoff" : "Dashboards turn metrics into answers: latency, error rate, forecasts, the traffic heatmap.",
     "options" : [ ],
     "removable" : true,
-    "setting" : null
+    "setting" : null,
+    "nodes" : [ ]
   }, {
     "id" : "expand-disk",
     "name" : "Expand cargo hold",
@@ -45,7 +47,8 @@
     "tradeoff" : "Buys time, not a fix: the hold fills again, just later.",
     "options" : [ ],
     "removable" : false,
-    "setting" : null
+    "setting" : null,
+    "nodes" : [ "disk" ]
   }, {
     "id" : "nginx-rate-limit",
     "name" : "Nginx rate limit",
@@ -65,7 +68,8 @@
       "value" : 150.0,
       "min" : 50.0,
       "max" : 400.0
-    }
+    },
+    "nodes" : [ "gateway" ]
   }, {
     "id" : "create-index",
     "name" : "Create index",
@@ -90,7 +94,8 @@
       "tradeoff" : "No write lock, but slower and adds database I/O while it builds."
     } ],
     "removable" : true,
-    "setting" : null
+    "setting" : null,
+    "nodes" : [ "db_cpu", "db_pool", "db_io" ]
   } ],
   "actions" : [ {
     "id" : "clear-disk",

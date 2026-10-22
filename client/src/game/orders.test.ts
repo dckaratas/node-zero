@@ -2,17 +2,18 @@ import { describe, expect, it } from 'vitest';
 import type { CatalogItem } from '../protocol/messages';
 import { cardState, Orders } from './orders';
 import type { View } from './store';
+import { NODE01 } from './station';
 
 function item(id: string, credits: number, requiresCounters: string[] = []): CatalogItem {
   return {
     id, name: id, realTech: id, credits, upkeepPerWave: 0, toil: 0, applyTimeS: 5, requiresCounters,
-    requiresInsight: null, grantsInsights: [], tradeoff: '', options: [], removable: true, setting: null,
+    requiresInsight: null, grantsInsights: [], tradeoff: '', options: [], removable: true, setting: null, nodes: [],
   };
 }
 
 function view(credits: number, counters: View['counters'] = [], tick = 100): View {
   return { tick, credits, wave: 0, phase: 'PREPARATION', shield: 1, burnRate: 0, shieldEmptyInS: -1, metrics: {},
-    signals: [], insights: [], counters, postmortem: null, codex: [], results: [], chapter: null, crew: 8, actions: [], alerts: [] };
+    signals: [], insights: [], counters, postmortem: null, codex: [], results: [], chapter: null, crew: 8, actions: [], alerts: [], station: NODE01 };
 }
 
 const prometheus = item('prometheus', 200);

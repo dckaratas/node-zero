@@ -45,6 +45,8 @@ describe('server → client contract', () => {
     expect(catalog.counters[4]?.options.map((o) => o.id)).toEqual(['blocking', 'concurrently']);
     expect(catalog.counters[2]?.removable).toBe(false);
     expect(catalog.counters[3]?.setting).toEqual({ key: 'rate_rps', value: 150, min: 50, max: 400 });
+    expect(catalog.counters[3]?.nodes).toEqual(['gateway']); // a rate limiter answers at the edge
+    expect(catalog.counters[0]?.nodes).toEqual([]);
     expect(catalog.counters[0]?.requiresInsight).toBeNull();
   });
 
@@ -54,6 +56,11 @@ describe('server → client contract', () => {
     expect(pm?.questionKey).toBe('pm.log_storm.q');
     expect(pm?.options).toHaveLength(4);
     expect(pm?.correct).toBeNull();
+  });
+
+  it('sends the station capacities on keyframes', () => {
+    const s = parseServerMessage(fixture('snapshot-keyframe'));
+    expect(s.type === 'snapshot' && s.station?.threads).toBe(200);
   });
 
   it('sends alert rules with their state', () => {

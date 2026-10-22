@@ -31,6 +31,6 @@ describe('alerts', () => {
   it('points the map at the node a firing metric belongs to', () => {
     const cpu = rule({ pendingSinceTick: 1, firingSinceTick: 2 });
     const pool = rule({ id: 'a2', metric: 'hikaricp_connections_pending', pendingSinceTick: 1, firingSinceTick: 2 });
-    expect([...firingNodes([cpu, pool, rule({ id: 'a3', metric: 'disk_usage_ratio' })])]).toEqual(['cpu', 'pool']);
+    expect([...firingNodes([cpu, pool, rule({ id: 'a3', metric: 'disk_usage_ratio' })])]).toEqual(['cpu', 'db_pool']);
   });
 });

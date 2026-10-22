@@ -46,6 +46,7 @@ class CounterRemovalTest {
     void scalingDownTakesAsLongAsScalingUpAndGoesDarkAgain() {
         GameState s = installed("vertical-scale-cpu");
         assertThat(cores(s)).isEqualTo(8);
+        assertThat(GAME.observe(s).station().cpuCores()).as("the map sees the new hardware").isEqualTo(8);
         int credits = s.progress().credits();
         int crew = GAME.observe(s).crew();
 
@@ -57,8 +58,16 @@ class CounterRemovalTest {
 
         GameState done = idle(removing, 5);
         assertThat(cores(done)).isEqualTo(4);
+        assertThat(GAME.observe(done).station().cpuCores()).isEqualTo(4);
         assertThat(done.progress().isInstalled("vertical-scale-cpu")).isFalse();
         assertThat(done.progress().credits()).as("no refund").isEqualTo(credits);
+    }
+
+    @Test
+    void theStationReportsItsCapacities() {
+        assertThat(GAME.observe(GAME.newState(1)).station()).isEqualTo(new Observation.Station(4, 200, 10, 100, 4, 1));
+        assertThat(GAME.observe(installed("raise-max-threads", "expand-disk")).station())
+                .isEqualTo(new Observation.Station(4, 400, 10, 200, 4, 1));
     }
 
     @Test

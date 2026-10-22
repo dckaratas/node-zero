@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ActionRun, CatalogAction } from '../protocol/messages';
 import { actionState } from './actions';
 import type { View } from './store';
+import { NODE01 } from './station';
 
 const restart: CatalogAction = {
   id: 'restart-app', name: 'Restart', realTech: 'systemctl restart', detail: '', toil: 2, cooldownS: 30, options: [],
@@ -9,7 +10,7 @@ const restart: CatalogAction = {
 
 function view(tick: number, crew: number, actions: ActionRun[] = []): View {
   return { tick, credits: 1000, wave: 3, phase: 'RUNNING', shield: 1, burnRate: 0, shieldEmptyInS: -1, metrics: {},
-    signals: [], insights: [], counters: [], postmortem: null, codex: [], results: [], chapter: null, crew, actions, alerts: [] };
+    signals: [], insights: [], counters: [], postmortem: null, codex: [], results: [], chapter: null, crew, actions, alerts: [], station: NODE01 };
 }
 
 describe('actionState', () => {

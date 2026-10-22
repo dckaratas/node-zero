@@ -35,7 +35,8 @@ public final class CounterCatalog {
             String tradeoff,
             List<Option> options,
             boolean removable,
-            Setting setting) {}
+            Setting setting,
+            List<String> nodes) {}
 
     /** The player-editable value that drives the counter's effect (slice 7c), e.g. Nginx {@code rate_rps}. */
     public record Setting(String key, double value, double min, double max) {}
@@ -106,7 +107,28 @@ public final class CounterCatalog {
         return new Item(def.id(), def.name().in(language), def.realTech(), def.cost().credits(),
                 def.cost().upkeepPerWave(), def.toil(), def.applyTimeS(), def.requiresCounters(), def.requiresInsight(),
                 def.grantsInsights(), content.messages().text(language, def.tradeoffKey()), List.copyOf(options),
-                def.removable(), setting(def.setting()));
+                def.removable(), setting(def.setting()), nodes(def));
+    }
+
+    /**
+     * Map nodes a counter acts on (slice 8a, decision AO), from the targets of its effects: {@code cpu},
+     * {@code threads}, {@code db_pool}, {@code disk}, {@code db_cpu}, {@code db_io}. A rate limiter answers
+     * at the edge, so it belongs to the {@code gateway}. Counters without a target (monitoring, rescheduling) show under every node.
+     */
+    private static List<String> nodes(CounterDef def) {
+        List<CounterDef.EffectSpec> effects = new ArrayList<>();
+        effects.add(def.effect());
+        effects.addAll(def.sideEffect());
+        def.options().forEach(o -> effects.addAll(o.sideEffect()));
+        List<String> nodes = new ArrayList<>();
+        for (CounterDef.EffectSpec e : effects) {
+            String node = "rate_limit".equals(e.type()) ? "gateway"
+                    : e.target() == null ? null : e.target().name().toLowerCase(Locale.ROOT);
+            if (node != null && !nodes.contains(node)) {
+                nodes.add(node);
+            }
+        }
+        return List.copyOf(nodes);
     }
 
     private static Setting setting(CounterDef.ConfigParam p) {

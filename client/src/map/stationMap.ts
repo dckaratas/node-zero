@@ -1,6 +1,6 @@
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import type { View } from '../game/store';
-import { LINKS, loadColor, NODES, type StationNode } from '../game/station';
+import { LINKS, loadColor, NODE01, NODES, type StationNode } from '../game/station';
 import { hexCorners, hexToPixel, type Point } from './hex';
 
 /** Grid spacing; hexes are drawn smaller so the pipes between them show. */
@@ -28,11 +28,18 @@ export class StationMap {
   private readonly sprites: NodeSprite[] = [];
   private flowPhase = 0;
   private alertPhase = 0;
+  /** Invisible DOM buttons over the hexes (decision AS): mouse, touch, keyboard and screen readers alike. */
+  private readonly buttons = new Map<string, HTMLButtonElement>();
+  private selected: string | null = null;
+  private onSelect: (id: string | null) => void = () => undefined;
 
   async mount(host: HTMLElement): Promise<void> {
     await this.app.init({ resizeTo: host, background: 0x0b1020, antialias: true, autoDensity: true,
       resolution: window.devicePixelRatio });
     host.appendChild(this.app.canvas);
+    const overlay = document.createElement('div');
+    overlay.className = 'map-nodes';
+    host.appendChild(overlay);
     this.app.stage.addChild(this.world);
     this.world.addChild(this.pipes, this.flow);
 
@@ -47,6 +54,14 @@ export class StationMap {
       value.position.set(centre.x, centre.y + 12);
       this.world.addChild(hex, label, value);
       this.sprites.push({ node, centre, hex, value });
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'map-node';
+      button.textContent = node.label;
+      button.setAttribute('aria-pressed', 'false');
+      button.onclick = () => this.select(this.selected === node.id ? null : node.id);
+      overlay.append(button);
+      this.buttons.set(node.id, button);
     }
     this.drawPipes();
     this.centre();
@@ -64,16 +79,29 @@ export class StationMap {
     this.alertPhase = (this.alertPhase + deltaMs / 600) % (2 * Math.PI);
     const pulse = 0.55 + 0.45 * Math.sin(this.alertPhase);
     for (const s of this.sprites) {
-      const load = s.node.load(metrics);
+      const load = s.node.load(metrics, view?.station ?? NODE01);
       const outline = alerting.has(s.node.id)
         ? { width: 5, color: 0xff4d4f, alpha: pulse }
-        : { width: 2, color: 0x8fa3d9, alpha: 0.6 };
+        : s.node.id === this.selected
+          ? { width: 4, color: 0xffffff, alpha: 0.95 }
+          : { width: 2, color: 0x8fa3d9, alpha: 0.6 };
       s.hex.clear()
         .poly(hexCorners(s.centre, DRAWN_SIZE)).fill({ color: loadColor(load) })
         .stroke(outline);
       s.value.text = load === undefined ? (s.node.id === 'gateway' ? '' : '?') : `${Math.round(load * 100)}%`;
     }
     this.drawFlow(metrics['request_rate'], deltaMs);
+  }
+
+  /** The player picked a node (or {@code null} to close the inspector). */
+  onNodeSelected(listener: (id: string | null) => void): void {
+    this.onSelect = listener;
+  }
+
+  select(id: string | null): void {
+    this.selected = id;
+    for (const [nodeId, button] of this.buttons) button.setAttribute('aria-pressed', String(nodeId === id));
+    this.onSelect(id);
   }
 
   private drawPipes(): void {
@@ -116,6 +144,16 @@ export class StationMap {
     this.world.position.set(
       width / 2 - (bounds.x + bounds.width / 2) * scale,
       height / 2 - (bounds.y + bounds.height / 2) * scale);
+    // Keep the DOM buttons over their hexes.
+    const size = DRAWN_SIZE * 1.6 * scale;
+    for (const s of this.sprites) {
+      const b = this.buttons.get(s.node.id);
+      if (b === undefined) continue;
+      b.style.width = `${size}px`;
+      b.style.height = `${size}px`;
+      b.style.left = `${this.world.position.x + s.centre.x * scale - size / 2}px`;
+      b.style.top = `${this.world.position.y + s.centre.y * scale - size / 2}px`;
+    }
   }
 
   get ticker() {

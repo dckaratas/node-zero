@@ -26,11 +26,15 @@ export class CounterPanel {
   private cards: Card[] = [];
   private known: Set<string> | undefined;
   private names = new Map<string, string>();
+  private readonly filterBar = document.createElement('p');
+  private filter: string | null = null;
 
   constructor(host: HTMLElement, private readonly orders: Orders, private readonly buy: (item: CatalogItem, option?: string) => void,
     private readonly tickHz: () => number, private readonly send: (action: ClientAction) => boolean) {
     this.list.className = 'cards';
-    host.append(this.list);
+    this.filterBar.className = 'filter';
+    this.filterBar.hidden = true;
+    host.append(this.filterBar, this.list);
   }
 
   /** New session: forget what was discovered. */
@@ -47,6 +51,31 @@ export class CounterPanel {
     this.names = new Map(catalog.counters.map((c) => [c.id, c.name]));
     this.cards = catalog.counters.map((item) => this.card(item, discovered.has(item.id)));
     this.list.replaceChildren(...this.cards.map((c) => c.root));
+    this.applyFilter();
+  }
+
+  /**
+   * Shows only the modules that act on one map node (slice 8a, decision AO); {@code null} shows all.
+   * Modules without a target (monitoring) belong to every node.
+   */
+  setFilter(node: string | null, label = ''): void {
+    this.filter = node;
+    this.filterBar.hidden = node === null;
+    if (node !== null) {
+      const all = document.createElement('button');
+      all.type = 'button';
+      all.textContent = 'Show all';
+      all.onclick = () => this.setFilter(null);
+      this.filterBar.replaceChildren(`Modules for ${label} `, all);
+    }
+    this.applyFilter();
+  }
+
+  private applyFilter(): void {
+    for (const card of this.cards) {
+      const nodes = card.item.nodes;
+      card.root.hidden = this.filter !== null && nodes.length > 0 && !nodes.includes(this.filter);
+    }
   }
 
   render(view: View | undefined): void {

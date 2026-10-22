@@ -27,7 +27,7 @@ export interface Welcome {
   snapshotHz: number;
 }
 
-/** Fog-of-war view. Delta fields (insights, counters, codex, results, actions, alerts) are absent when unchanged. */
+/** Fog-of-war view. Delta fields (insights, counters, codex, results, actions, alerts, station) are absent when unchanged. */
 export interface Snapshot {
   type: 'snapshot';
   tick: number;
@@ -59,6 +59,18 @@ export interface Snapshot {
   actions?: ActionRun[];
   /** The player's alert rules with their state; absent when unchanged (delta field). */
   alerts?: AlertRule[];
+  /** The station's capacities; absent when unchanged (delta field). */
+  station?: StationCapacity;
+}
+
+/** What NODE-01 is built of; structural counters change it. */
+export interface StationCapacity {
+  cpuCores: number;
+  threads: number;
+  dbPool: number;
+  diskMb: number;
+  dbCpuCores: number;
+  dbIoDisks: number;
 }
 
 /** An alert rule: pending while `metric op threshold` holds, firing once it has held for forS. */
@@ -169,6 +181,8 @@ export interface CatalogItem {
   removable: boolean;
   /** The player-editable value that drives the effect, e.g. Nginx rate_rps. */
   setting: CatalogSetting | null;
+  /** Map nodes it acts on; empty for counters without a target (monitoring), which belong to every node. */
+  nodes: string[];
 }
 
 export interface CatalogSetting {
@@ -318,7 +332,7 @@ function catalogOption(v: unknown, path: string): CatalogOption {
 function catalogItem(v: unknown, path: string): CatalogItem {
   const o = object(v, path);
   keys(o, path, ['id', 'name', 'realTech', 'credits', 'upkeepPerWave', 'toil', 'applyTimeS', 'requiresCounters',
-    'requiresInsight', 'grantsInsights', 'tradeoff', 'options', 'removable', 'setting']);
+    'requiresInsight', 'grantsInsights', 'tradeoff', 'options', 'removable', 'setting', 'nodes']);
   return {
     id: str(o['id'], `${path}.id`),
     name: str(o['name'], `${path}.name`),
@@ -334,6 +348,7 @@ function catalogItem(v: unknown, path: string): CatalogItem {
     options: list(o['options'], `${path}.options`, catalogOption),
     removable: bool(o['removable'], `${path}.removable`),
     setting: nullable(o['setting'], `${path}.setting`, catalogSetting),
+    nodes: strings(o['nodes'], `${path}.nodes`),
   };
 }
 
@@ -360,6 +375,19 @@ function catalogAction(v: unknown, path: string): CatalogAction {
       return { id: str(option['id'], `${p2}.id`), name: str(option['name'], `${p2}.name`),
         detail: str(option['detail'], `${p2}.detail`) };
     }),
+  };
+}
+
+function stationCapacity(v: unknown, path: string): StationCapacity {
+  const o = object(v, path);
+  keys(o, path, ['cpuCores', 'threads', 'dbPool', 'diskMb', 'dbCpuCores', 'dbIoDisks']);
+  return {
+    cpuCores: num(o['cpuCores'], `${path}.cpuCores`),
+    threads: num(o['threads'], `${path}.threads`),
+    dbPool: num(o['dbPool'], `${path}.dbPool`),
+    diskMb: num(o['diskMb'], `${path}.diskMb`),
+    dbCpuCores: num(o['dbCpuCores'], `${path}.dbCpuCores`),
+    dbIoDisks: num(o['dbIoDisks'], `${path}.dbIoDisks`),
   };
 }
 
@@ -476,7 +504,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
     case 'snapshot': {
       keys(o, 'snapshot', ['type', 'tick', 'credits', 'wave', 'phase', 'shield', 'burnRate', 'shieldEmptyInS',
         'metrics', 'signals', 'crew'], ['insights', 'counters', 'postmortem', 'codex', 'results', 'chapter', 'actions',
-        'alerts']);
+        'alerts', 'station']);
       const phase = str(o['phase'], 'snapshot.phase');
       if (!PHASES.includes(phase)) throw new ProtocolError(`snapshot.phase: unknown ${phase}`);
       const s: Snapshot = {
@@ -500,6 +528,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       if (o['chapter'] !== undefined) s.chapter = chapterSummary(o['chapter'], 'snapshot.chapter');
       if (o['actions'] !== undefined) s.actions = list(o['actions'], 'snapshot.actions', actionRun);
       if (o['alerts'] !== undefined) s.alerts = list(o['alerts'], 'snapshot.alerts', alertRule);
+      if (o['station'] !== undefined) s.station = stationCapacity(o['station'], 'snapshot.station');
       return s;
     }
     case 'rejected':

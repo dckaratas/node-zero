@@ -15,5 +15,13 @@
   "results" : [ ],
   "crew" : 8,
   "actions" : [ ],
-  "alerts" : [ ]
+  "alerts" : [ ],
+  "station" : {
+    "cpuCores" : 4,
+    "threads" : 200,
+    "dbPool" : 10,
+    "diskMb" : 100.0,
+    "dbCpuCores" : 4,
+    "dbIoDisks" : 1
+  }
 }

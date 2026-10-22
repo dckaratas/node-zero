@@ -127,3 +127,9 @@ M/M/c kuyruğunda Erlang-C de aynı üstel sönümü verir. Amaç (kademeli pay,
   (sadece görünen metrikler).
 - Yan düzeltme: HUD'da çok küçük yakma hızı (×0,04, "empty in 41192 s") gizlendi (eşik ×0,1).
 - Protokol: snapshot'ta `alerts` (delta); istemci mesajları `set_alert {metric, op, threshold, forS}`, `remove_alert {rule}`.
+
+## Ek (Dilim 8a, 2026-10-22): kapasite, denetçi, süzme
+- AR: snapshot `station` (çekirdek, thread, havuz, disk; delta). Harita yükü sunucudan gelen kapasiteye göre (CPU/thread büyütmesinden sonra doğru yüzde).
+- AN/AQ: hex üstünde görünmez DOM düğmeleri (AS); seçilen düğüm beyaz çerçeve. Panel başında denetçi: kapasite, USE (ölçülemiyorsa "? needs <modül>", hiç export edilmiyorsa "not exported"), son 60 sn sparkline, düğümün alarm kuralları, "Alert on <metrik>" kısayolu.
+- AO: katalogda `nodes` (efekt hedefleri; rate limit → gateway; hedefsizler her düğümde); düğüm seçilince kartlar süzülür, "Show all".
+- Düzeltme: alarm formu metrik yokken görünüyordu.
