@@ -1,6 +1,6 @@
 # ADR-0018: Olay anı oynanışı (Dilim 7)
 
-- **Durum:** Kabul edildi; 7a uygulandı (7b müdahale, 7c kaldırma, 7d alarm sırada)
+- **Durum:** Kabul edildi; 7a ve 7b uygulandı (7c kaldırma, 7d alarm sırada)
 - **Tarih:** 2026-10-22
 
 ## Bağlam
