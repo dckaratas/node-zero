@@ -1,5 +1,28 @@
 # Build
 target/
+.mvn/wrapper/maven-wrapper.jar
+
+# Client (also in client/.gitignore)
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# JVM crash dumps, profiles, benchmark output
+hs_err_pid*
+replay_pid*
+*.jfr
+jmh-result.*
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+application-local.yaml
+
+# Claude Code: local settings stay on this machine; launch.json is shared
+.claude/settings.local.json
 
 # IDE
 .idea/
@@ -8,10 +31,12 @@ target/
 .classpath
 .project
 .settings/
+*.swp
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Logs
 *.log

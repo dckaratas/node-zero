@@ -51,6 +51,8 @@ Hazırlık ──► Dalga ──► Postmortem ──► Araştırma ──┐
    ▲           duraklat)                              │
    └──────────────────────────────────────────────────┘
 ```
+Bölüm 1'de Hazırlık → Dalga → Postmortem oynanabilir. Araştırma (teknoloji ağacı) henüz yok: kilitli modüller
+(LB, read replica) Bölüm 3'te açılacak.
 
 ### Dalga, kalkan ve kredi (Dilim 3b)
 | Kural | Değer |
@@ -159,10 +161,19 @@ Bir kaynak birden fazla modelde olabilir (disk: alan = fill, I/O = utilization).
 ## 7. Bölüm 1 "Ateşleme" — tehditler
 | Dalga | id | Model | Özet | Karşı aksiyonlar | Doğru kök neden |
 |---|---|---|---|---|---|
-| 2 | `log-storm` | fill (disk) | Deploy sonrası DEBUG log açık kaldı; 200 rps × 2 KB. Prometheus yoksa görünmez | Log seviyesini INFO yap (toil), logrotate (150 kr), disk büyüt (300 kr, sorunu erteler) | Yanlış log seviyesi |
-| 3 | `traffic-surge` "Koloni Festivali" | utilization (CPU) | Habersiz kampanya, ×3 trafik (ramp 20 sn / plato 60 sn / decay 40 sn). Dalga 2'de iletişim kanalına ipucu | Reaktör yükseltme (+4 çekirdek, 400 kr, 5 sn kesinti), Nginx `limit_req` (100 kr, 429 döner). LB kilitli (Bölüm 3) | Kapasite planlanmadı (DDoS aldatıcı) |
-| 4 | `slow-endpoint` "Arşiv Kayması" | occupancy (thread + Hikari) | `orders` 1M satırı geçince indekssiz sorgu yavaşlar (rows/500 ms). **Uygulama CPU'su düşük (aldatıcı)**, DB CPU yüksek | `statement_timeout` (sigorta), `CREATE INDEX` (blocking: yazma kilidi / `CONCURRENTLY`: yavaş ama güvenli; `pg_stat_statements` ile teşhis gerekir), `maxThreads` artırmak (semptom tedavisi) | Eksik indeks + veri büyümesi |
-| 5 | `nightly-report-job` "Gece Defteri" | utilization (DB I/O) + occupancy (Hikari 8/10) | Cron `0 3 * * *` istasyon saati = Europa'da 15:00 (yoğun saat). Süre rows/50k dk | Zamanlamayı değiştir (heatmap gerekir), Spring Batch chunking + throttle, bulkhead (job için ayrı pool=2), **tuzak: naive retry (yük ×2)**. Read replica kilitli (Bölüm 3) | Job, kullanıcı trafiğiyle aynı kaynakları paylaştı ve yoğun saate denk geldi |
+| 2 | `log-storm` | fill (disk) | Deploy sonrası DEBUG log açık kaldı; 100 rps × 3 KB ≈ 0.3 MB/sn. Prometheus yoksa görünmez | Log seviyesini INFO yap (toil), logrotate (150 kr), disk büyüt (300 kr, sorunu erteler) | Yanlış log seviyesi |
+| 3 | `traffic-surge` "Koloni Festivali" | utilization (CPU) | Habersiz kampanya, ×3 trafik (ramp 20 sn / plato 60 sn / decay 40 sn). Dalga 2'de duyuru (brifing kartı) | Reaktör yükseltme (+4 çekirdek, 400 kr; bakım penceresi: 20 sn hazırlık + 5 sn kesinti / canlı geçiş: 650 kr, 30 sn, kesintisiz), Nginx `limit_req` (100 kr, 429 döner). LB kilitli (Bölüm 3) | Kapasite planlanmadı (DDoS aldatıcı) |
+| 4 | `slow-endpoint` "Arşiv Kayması" | occupancy (thread + Hikari) | `orders` 500k satırdan saniyede ~4750 satır büyür; indekssiz sorgu satır sayısıyla yavaşlar. **Uygulama CPU'su düşük (aldatıcı)**, DB CPU yüksek | `statement_timeout` (sigorta), `CREATE INDEX` (blocking: yazma kilidi / `CONCURRENTLY`: yavaş ama güvenli; `pg_stat_statements` ile teşhis gerekir), `maxThreads` artırmak (semptom tedavisi) | Eksik indeks + veri büyümesi |
+| 5 | `nightly-report-job` "Gece Defteri" | utilization (DB I/O) + occupancy (Hikari 8/10) | Cron `0 3 * * *` istasyon saati = Europa'da 15:00 (yoğun saat); dalganın 20. sn'sinde başlar. Süre rows/50k dk | Zamanlamayı değiştir (heatmap gerekir), Spring Batch chunking + throttle, bulkhead (job için ayrı pool=2), **tuzak: naive retry (yük ×2)**. Read replica kilitli (Bölüm 3) | Job, kullanıcı trafiğiyle aynı kaynakları paylaştı ve yoğun saate denk geldi |
+
+### Müdahale eylemleri (dalga sırasında, mürettebat harcar; ADR-0018)
+| Eylem | Gerçek karşılığı | Ne zaman işe yarar |
+|---|---|---|
+| `restart-app` | `systemctl restart` | Silinmiş log dosyalarının tuttuğu yeri boşaltır; 10 sn kesinti + soğuk JVM |
+| `clear-disk` | `truncate` / arşivleri sil / `rm` | Disk dolarken zaman kazandırır (`rm` açık dosyada yer açmaz) |
+| `cancel-queries` | `pg_cancel_backend` | Yavaş sorguların tuttuğu havuzu geçici boşaltır |
+| `rollback` | Sürümü geri al | Deploy kaynaklı sorunlarda (DEBUG log) |
+| `kill-switch` | Özellik kapatma (graceful degradation) | Festivalde 60 sn istek başı CPU maliyetini %40 düşürür, isteklerin %1'ini bilerek reddeder |
 
 ## 8. İçerik şeması
 Dosyalar `sim-core/src/main/resources/content/` altında; yükleme sırası `index.yaml`'da.
@@ -178,7 +189,7 @@ Kurallar (yükleyici zorlar):
 | Her metin anahtarı EN ve TR'de var, kullanılmayan anahtar yok | `missing TR text for 'pm.x'` |
 
 Opsiyonel alanlar: `data` (tablo büyümesi; `per_row_ms` için gerekli), `job` (batch süresi),
-`trigger.schedule` (cron + saat dilimi), `consumes[].slots` (job'ın tuttuğu bağlantı sayısı).
+`trigger.schedule` (cron + saat dilimi), `trigger.briefing_key` (dalga öncesi brifing metni), `job.starts_after_s`, `consumes[].slots` (job'ın tuttuğu bağlantı sayısı).
 
 ### Tehdit (`content/threats/*.yaml`)
 ```yaml
@@ -186,7 +197,7 @@ threat:
   id: traffic-surge
   name: { en: "Colony Festival", tr: "Koloni Festivali" }
   chapter: 1
-  trigger: { wave: 3, event: marketing-campaign, warning: { wave: 2, channel: comms, text_key: "comms.festival_teaser" } }
+  trigger: { wave: 3, event: marketing-campaign, briefing_key: "briefing.campaign", warning: { wave: 2, channel: comms, text_key: "comms.festival_teaser" } }
   traffic:
     baseline_rps: 100
     shape:
@@ -252,13 +263,14 @@ threat:
 ## 10. Yol haritası
 | Dilim | İçerik |
 |---|---|
-| 0 | Repo: CLAUDE.md, GDD, ADR'ler, Maven iskeleti, CI |
-| 1a | sim-core: GameState, Simulation, UtilizationModel |
-| 1b | OccupancyModel |
-| 1c | FillModel (kullanıcı yazar) |
-| 2 | YAML içerik yükleyici + Bölüm 1 tehdit/counter dosyaları + şema doğrulama |
-| 3 | Dalga yöneticisi, hata bütçesi, komutlar, sis perdesi |
-| 4 | Spring Boot oyun sunucusu + WebSocket (5 Hz, değişince gönderilen snapshot; ADR-0015 eki) |
-| 5 | TypeScript/PixiJS istemci (altıgen harita, HUD, interpolasyon; ADR-0016; 5b sayaç paneli + iyimser arayüz) |
-| 6 | Postmortem + Kodeks + i18n |
-| 7 | Canlıya alma: Docker, VPS, Prometheus/Grafana ile oyunun kendisini izleme |
+| 0 | Repo: CLAUDE.md, GDD, ADR'ler, Maven iskeleti, CI ✅ |
+| 1 | sim-core: GameState, Simulation; utilization (1a), occupancy (1b), fill (1c) modelleri ✅ |
+| 2 | YAML içerik yükleyici + Bölüm 1 tehdit/counter dosyaları + şema doğrulama ✅ |
+| 3 | İstek hattı + dalga trafiği (3a), hata bütçesi + karşı aksiyonlar (3b), sis perdesi (3c) ✅ |
+| 4 | Spring Boot oyun sunucusu + WebSocket (5 Hz, değişince gönderilen snapshot; ADR-0015) ✅ |
+| 5 | TypeScript/PixiJS istemci: altıgen harita, HUD, interpolasyon, sayaç paneli (ADR-0016) ✅ |
+| 6 | Postmortem, kodeks, dil seçici (ADR-0017) ✅ |
+| 7 | Olay anı oynanışı: kalkan + bölüm sonu, müdahale + mürettebat, kaldırma + ayar, alarm (ADR-0018) ✅ |
+| 8 | Harita etkileşimi: denetçi + kapasite, haritada geri bildirim, kalkan kubbesi ✅ |
+| 9 | Denge: dalga 2/4/5 + BalanceTest, festival (özellik kapatma, CPU seçenekleri), dalga brifingleri ✅ |
+| Son | Canlıya alma: Docker, VPS, Prometheus/Grafana ile oyunun kendisini izleme |
