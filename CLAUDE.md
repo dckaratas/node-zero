@@ -35,6 +35,9 @@ Detaylar: [docs/GDD.md](docs/GDD.md) · Kararlar: [docs/adr/](docs/adr/) · Öğ
 - **Performans** (ADR-0014, kullanıcının açık isteği): tick < 20 µs/oturum. `Game.step` sıcak yolunda regex, stream,
   string, log yok; içerik yüklemede bir kez çözülür. Hattı/modelleri değiştirince `sim-bench`'i çalıştır.
 - Locale: testler `tr_TR` altında koşar. Tanımlayıcılarda `Locale.ROOT` kullan.
+- **Sürümler sabit**: npm tam sürüm (`client/.npmrc` save-exact + lock), Maven aralıksız (enforcer `banDynamicVersions` +
+  `requirePluginVersions`), Actions commit SHA. Yükseltme sadece güvenlik açığı varsa ya da bilerek planlanınca;
+  CI `npm audit` koşar, Dependabot yalnız güvenlik PR'ı açar.
 - Kod yorumları ve tanımlayıcılar İngilizce; dokümanlar Türkçe.
 
 ## Simülasyon sabitleri

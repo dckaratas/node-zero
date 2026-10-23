@@ -1,0 +1,20 @@
+# Versions are pinned on purpose: no routine version-bump PRs (open-pull-requests-limit: 0).
+# Dependabot security updates still open PRs for known vulnerabilities once they are enabled in the repository's
+# settings (Code security → Dependabot security updates); they ignore this limit.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /client
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
