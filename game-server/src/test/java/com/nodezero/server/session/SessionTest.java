@@ -99,7 +99,7 @@ class SessionTest {
     @Test
     void commandsThatConflictTogetherAreRejectedInArrivalOrder() {
         // 1000 credits: the 400 upgrade fits, then logrotate fits, then grafana needs prometheus first.
-        session.submit(new Command.ApplyCounter("vertical-scale-cpu"));
+        session.submit(new Command.ApplyCounter("vertical-scale-cpu", "maintenance"));
         session.submit(new Command.ApplyCounter("expand-disk"));
         session.submit(new Command.ApplyCounter("logrotate"));
         session.submit(new Command.ApplyCounter("nginx-rate-limit"));

@@ -42,7 +42,7 @@ public final class CounterCatalog {
     public record Setting(String key, double value, double min, double max) {}
 
     /** @param applyTimeS overrides the counter's build time, or {@code null} */
-    public record Option(String id, String name, Double applyTimeS, String tradeoff) {}
+    public record Option(String id, String name, int credits, Double applyTimeS, String tradeoff) {}
 
     /** An incident action card (slice 7b): costs crew, not credits, and cools down. */
     public record Action(String id, String name, String realTech, String detail, int toil, double cooldownS,
@@ -101,7 +101,8 @@ public final class CounterCatalog {
     private static Item item(CounterDef def, Language language, Content content) {
         List<Option> options = new ArrayList<>();
         for (CounterDef.CounterOption o : def.options()) {
-            options.add(new Option(o.id(), o.name().in(language), o.applyTimeS(),
+            options.add(new Option(o.id(), o.name().in(language), o.credits() != null ? o.credits() : def.cost().credits(),
+                    o.applyTimeS(),
                     content.messages().text(language, o.tradeoffKey())));
         }
         return new Item(def.id(), def.name().in(language), def.realTech(), def.cost().credits(),

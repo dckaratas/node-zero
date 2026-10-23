@@ -31,6 +31,9 @@ enum EffectKind {
     EXTRA_LOAD(Timing.BUILD, ModelKind.UTILIZATION, true),
     COLD_START(Timing.BUILD, ModelKind.UTILIZATION, true),
     PAUSE_JOB(Timing.BUILD, null, false),
+    // Feature kill switch (slice 9b, ADR-0018 AW): cheaper requests, but the switched-off feature fails.
+    CPU_COST(Timing.BUILD, ModelKind.UTILIZATION, true),
+    SHED_SHARE(Timing.BUILD, null, true),
     // Incident actions (slice 7b): happen once, when the action runs.
     RESET_QUEUES(Timing.INSTANT, null, false),
     FREE_ORPHANED_DISK(Timing.INSTANT, null, false),

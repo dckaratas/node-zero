@@ -108,6 +108,10 @@ final class Pipeline {
         // Edge: rate limiter (429s) and Tomcat.
         double admitted = Math.min(arrivals, m.rateLimitRps);
         double edgeFailed = arrivals - admitted;
+        // A switched-off feature answers with an error instead of doing the work.
+        double shed = admitted * m.shedShare;
+        admitted -= shed;
+        edgeFailed += shed;
         double threadHoldMs = damped(s, THREADS,
                 latencyMs(s, CPU, cpuCost) + occupancy(s, DB_POOL).waitMs() + previousHoldMs(s, DB_POOL));
         double accepted = Math.max(0, admitted - occupancy(s, THREADS).rejectedRps());
@@ -168,6 +172,18 @@ final class Pipeline {
         return modifiers(progress, tick).cpuDown;
     }
 
+    /**
+     * Downtime of a build or a removal is the swap at its end (slice 9b, AX): a bigger VM is prepared while the
+     * old one serves, then {@code value} seconds of cut-over. Other build effects last the whole transition.
+     */
+    private static boolean inBuildWindow(InstalledCounter c, Rules.Effect e, long tick) {
+        if (e.kind() != EffectKind.DOWNTIME) {
+            return true;
+        }
+        long end = c.isRemoving() ? c.removedTick() : c.activeTick();
+        return tick >= end - Math.round(e.value() / SimConstants.DT);
+    }
+
     private Modifiers modifiers(Progress progress, long tick) {
         Modifiers m = new Modifiers();
         for (InstalledCounter installed : progress.counters()) {
@@ -178,7 +194,7 @@ final class Pipeline {
                 Rules.Effect e = effects.get(i);
                 boolean applies = switch (e.kind().timing) {
                     case ACTIVE -> active;
-                    case BUILD -> transition; // building or being removed (slice 7c)
+                    case BUILD -> transition && inBuildWindow(installed, e, tick); // building or being removed (slice 7c)
                     case STRUCTURAL, INSTANT, NARRATIVE -> false;
                 };
                 if (applies) {
@@ -256,6 +272,7 @@ final class Pipeline {
         boolean writeLocked;
         double ioLoadFactor = 1;
         double cpuSlowdown = 1;
+        double shedShare;
         boolean jobPaused;
 
         void apply(Rules.Effect e) {
@@ -277,6 +294,8 @@ final class Pipeline {
                 case WRITE_LOCK -> writeLocked = true;
                 case EXTRA_LOAD -> ioLoadFactor *= 1 + value;
                 case COLD_START -> cpuSlowdown *= value;
+                case CPU_COST -> cpuSlowdown *= value;
+                case SHED_SHARE -> shedShare = Math.max(shedShare, value);
                 case PAUSE_JOB -> jobPaused = true;
                 case ADD_SERVERS, ADD_SLOTS, SCALE_CAPACITY, ENABLE_PROMETHEUS, ENABLE_POSTGRES_EXPORTER, ENABLE_GRAFANA,
                         RETRY_FAILED, REJECT_WITH_STATUS, LESS_DEBUG_CONTEXT,

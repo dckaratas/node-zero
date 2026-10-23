@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogItem } from '../protocol/messages';
-import { cardState, Orders } from './orders';
+import { cardState, Orders, priceOf } from './orders';
 import type { View } from './store';
 import { NODE01 } from './station';
 
@@ -65,5 +65,27 @@ describe('cardState', () => {
     expect(cardState(prometheus, done, new Orders(), 10)).toEqual({ kind: 'installed', setting: null });
     const removing = view(800, [{ id: 'prometheus', option: null, readyTick: 50, removedTick: 130, setting: null }]);
     expect(cardState(prometheus, removing, new Orders(), 10)).toEqual({ kind: 'removing', secondsLeft: 3 });
+  });
+});
+
+describe('option prices', () => {
+  const cpu: CatalogItem = {
+    ...item('vertical-scale-cpu', 400),
+    options: [
+      { id: 'maintenance', name: 'Maintenance window', credits: 400, applyTimeS: null, tradeoff: '' },
+      { id: 'live', name: 'Live migration', credits: 650, applyTimeS: 30, tradeoff: '' },
+    ],
+  };
+
+  it('spends what the chosen option costs', () => {
+    const orders = new Orders();
+    orders.place(cpu, 'live');
+    expect(priceOf(cpu, 'live')).toBe(650);
+    expect(orders.projectedCredits(view(1000))).toBe(350);
+  });
+
+  it('keeps a card affordable while its cheapest option is', () => {
+    expect(cardState(cpu, view(500), new Orders(), 10)).toEqual({ kind: 'available' });
+    expect(cardState(cpu, view(300), new Orders(), 10)).toEqual({ kind: 'unaffordable' });
   });
 });

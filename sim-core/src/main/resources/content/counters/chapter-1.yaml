@@ -82,10 +82,19 @@ counters:
     real_tech: "Vertical scaling (+4 cores)"
     cost: { credits: 400, upkeep_per_wave: 40 }
     toil: 1
-    apply_time_s: 5
+    apply_time_s: 20 # a bigger VM is prepared first while the old one serves (AX)
+    options:
+      - id: maintenance
+        name: { en: "Maintenance window", tr: "Bakım penceresi" }
+        side_effect:
+          - { type: downtime, target: cpu, value: 5 } # the cut-over at the end of the build
+        tradeoff_key: tradeoff.vertical_scale_cpu_maintenance
+      - id: live
+        name: { en: "Live migration", tr: "Canlı geçiş" }
+        credits: 650
+        apply_time_s: 30
+        tradeoff_key: tradeoff.vertical_scale_cpu_live
     effect: { type: add_servers, target: cpu, value: 4 }
-    side_effect:
-      - { type: downtime, target: cpu, value: 5 }
     tradeoff_key: tradeoff.vertical_scale_cpu
     codex: [vertical-vs-horizontal]
 

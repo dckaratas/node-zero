@@ -1,4 +1,4 @@
-import { cardState, type CardState, type Orders } from '../game/orders';
+import { cardState, priceOf, type CardState, type Orders } from '../game/orders';
 import type { View } from '../game/store';
 import type { Catalog, CatalogItem, ClientAction } from '../protocol/messages';
 
@@ -150,7 +150,8 @@ export class CounterPanel {
         radio.value = o.id;
         radio.checked = i === 0;
         label.title = o.tradeoff;
-        label.append(radio, ` ${o.name}${o.applyTimeS === null ? '' : ` (${o.applyTimeS} s)`}`);
+        const price = o.credits === item.credits ? '' : ` · ${o.credits} cr`;
+        label.append(radio, ` ${o.name}${o.applyTimeS === null ? '' : ` (${o.applyTimeS} s${price})`}${o.applyTimeS === null ? price : ''}`);
         group.append(label);
       });
       root.append(group);
@@ -161,7 +162,9 @@ export class CounterPanel {
     status.setAttribute('aria-live', 'polite');
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = `Install (${item.credits} cr)`;
+    const label = (): string => `Install (${priceOf(item, option())} cr)`;
+    button.textContent = label();
+    root.addEventListener('change', () => { button.textContent = label(); });
     button.onclick = () => this.buy(item, option());
 
     // Removing has no refund and takes as long as building: ask once more before sending.

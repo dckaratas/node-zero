@@ -98,10 +98,10 @@ class WaveAndCounterTest {
 
     @Test
     void reactorUpgradeBeforeTheFestivalSavesTheWave() {
-        // Bought in preparation: the 5 s upgrade outage happens before the wave, outside the budget.
+        // Bought in preparation: the 20 s build and its cut-over outage end before the wave, outside the budget.
         GameState s = new Session()
-                .at(1, new ApplyCounter("vertical-scale-cpu"))
-                .at(100, new StartWave(3))
+                .at(1, new ApplyCounter("vertical-scale-cpu", "maintenance"))
+                .at(300, new StartWave(3))
                 .runWave();
 
         assertThat(((UtilizationModel) s.resource(ResourceId.CPU).model()).servers()).isEqualTo(8);
@@ -112,14 +112,26 @@ class WaveAndCounterTest {
     }
 
     @Test
-    void upgradingDuringTheWaveCostsAnOutage() {
-        GameState s = new Session()
-                .at(1, new StartWave(3))
-                .at(2, new ApplyCounter("vertical-scale-cpu"))
-                .runUntil(30);
+    void upgradingDuringTheWaveCostsAnOutageAtTheCutOver() {
+        GameState before = new Session().at(1, new StartWave(3)).at(2, new ApplyCounter("vertical-scale-cpu", "maintenance"))
+                .runUntil(152);
+        GameState after = new Session().at(1, new StartWave(3)).at(2, new ApplyCounter("vertical-scale-cpu", "maintenance"))
+                .runUntil(202);
 
-        // Reactor offline while the upgrade is installed: every request in those 5 s fails.
-        assertThat(s.wave().failedRequests()).isCloseTo(s.wave().requests(), within(s.wave().requests() * 0.1));
+        // The new VM is prepared for 15 s, then the reactor is offline for the 5 s cut-over: every request fails.
+        double requests = after.wave().requests() - before.wave().requests();
+        assertThat(after.wave().failedRequests() - before.wave().failedRequests()).isCloseTo(requests, within(requests * 0.1));
+    }
+
+    @Test
+    void aLiveMigrationCostsMoreButNeverGoesDark() {
+        // During a calm wave: 30 s of build, no cut-over outage.
+        GameState s = new Session().at(1, new StartWave(1)).at(2, new ApplyCounter("vertical-scale-cpu", "live"))
+                .runUntil(330);
+
+        assertThat(((UtilizationModel) s.resource(ResourceId.CPU).model()).servers()).isEqualTo(8);
+        assertThat(s.progress().credits()).isEqualTo(1000 - 650);
+        assertThat(s.wave().failedRequests()).isLessThan(1);
     }
 
     @Test
@@ -246,11 +258,11 @@ class WaveAndCounterTest {
 
     @Test
     void countersCostCreditsAndCannotBeBoughtTwiceOrOnCredit() {
-        Session session = new Session().at(1, new ApplyCounter("vertical-scale-cpu"));
+        Session session = new Session().at(1, new ApplyCounter("vertical-scale-cpu", "maintenance"));
         GameState s = session.runUntil(1);
         assertThat(s.progress().credits()).isEqualTo(600);
 
-        assertThatThrownBy(() -> game.step(s, List.of(new ApplyCounter("vertical-scale-cpu")), 2))
+        assertThatThrownBy(() -> game.step(s, List.of(new ApplyCounter("vertical-scale-cpu", "maintenance")), 2))
                 .hasMessageContaining("already installed");
         GameState poorer = game.step(s, List.of(new ApplyCounter("expand-disk")), 2);
         assertThatThrownBy(() -> game.step(poorer, List.of(new ApplyCounter("create-index", "blocking")), 3))
@@ -277,7 +289,7 @@ class WaveAndCounterTest {
         return new Session()
                 .at(1, new StartWave(2))
                 .at(50, new ApplyCounter("log-level-info"))
-                .at(1300, new ApplyCounter("vertical-scale-cpu"), new Command.AnswerPostmortem("b"), new StartWave(3))
+                .at(1300, new ApplyCounter("vertical-scale-cpu", "maintenance"), new Command.AnswerPostmortem("b"), new StartWave(3))
                 .runUntil(2500);
     }
 }

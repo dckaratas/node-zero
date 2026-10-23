@@ -197,6 +197,8 @@ export interface CatalogSetting {
 export interface CatalogOption {
   id: string;
   name: string;
+  /** What this option costs; a live migration costs more than a maintenance window (slice 9b). */
+  credits: number;
   /** Overrides the counter's build time when set. */
   applyTimeS: number | null;
   tradeoff: string;
@@ -326,8 +328,8 @@ function chapterSummary(v: unknown, path: string): ChapterSummary {
 
 function catalogOption(v: unknown, path: string): CatalogOption {
   const o = object(v, path);
-  keys(o, path, ['id', 'name', 'applyTimeS', 'tradeoff']);
-  return { id: str(o['id'], `${path}.id`), name: str(o['name'], `${path}.name`),
+  keys(o, path, ['id', 'name', 'credits', 'applyTimeS', 'tradeoff']);
+  return { id: str(o['id'], `${path}.id`), name: str(o['name'], `${path}.name`), credits: num(o['credits'], `${path}.credits`),
     applyTimeS: nullable(o['applyTimeS'], `${path}.applyTimeS`, num), tradeoff: str(o['tradeoff'], `${path}.tradeoff`) };
 }
 

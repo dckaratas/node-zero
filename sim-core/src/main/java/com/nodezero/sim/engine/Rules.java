@@ -157,13 +157,14 @@ public final class Rules {
 
             Map<String, CounterRules.Variant> variants = new LinkedHashMap<>();
             if (def.options().isEmpty()) {
-                variants.put("", new CounterRules.Variant(def.applyTimeS(), List.copyOf(base)));
+                variants.put("", new CounterRules.Variant(def.applyTimeS(), def.cost().credits(), List.copyOf(base)));
             }
             for (CounterDef.CounterOption option : def.options()) {
                 List<Effect> effects = new ArrayList<>(base);
                 option.sideEffect().forEach(e -> addCounterEffect(owner, e, effects, problems));
                 double applyTime = option.applyTimeS() != null ? option.applyTimeS() : def.applyTimeS();
-                variants.put(option.id(), new CounterRules.Variant(applyTime, List.copyOf(effects)));
+                int credits = option.credits() != null ? option.credits() : def.cost().credits();
+                variants.put(option.id(), new CounterRules.Variant(applyTime, credits, List.copyOf(effects)));
             }
             resolved.put(def.id(), new CounterRules(def, Collections.unmodifiableMap(variants)));
         }
@@ -288,7 +289,7 @@ public final class Rules {
     record CounterRules(CounterDef def, Map<String, Variant> variants) {
 
         /** {@code effects} starts with the main effect, then the side effects (a setting replaces the first value). */
-        record Variant(double applyTimeS, List<Effect> effects) {}
+        record Variant(double applyTimeS, int credits, List<Effect> effects) {}
 
         Variant variant(String option) {
             Variant v = variants.get(option == null ? "" : option);

@@ -75,3 +75,16 @@ actions:
       - { type: rollback_deploy }
       - { type: downtime, target: cpu, value: 5, from_s: 0, to_s: 5 }
     codex: [mitigation-vs-fix]
+
+  - id: kill-switch
+    name: { en: "Switch off a feature", tr: "Bir özelliği kapat" }
+    real_tech: "Feature flag: recommendations=off"
+    detail:
+      en: "Turns off the costly recommendations panel for 60 s: every request needs 40 % less CPU, but the 1 % of requests that only wanted recommendations fail. Buys time when the CPU is the bottleneck, burns shield for nothing when it is not."
+      tr: "Pahalı öneri panelini 60 sn kapatır: her istek %40 daha az CPU ister, ama sadece öneri isteyen %1'lik kısım başarısız olur. Darboğaz CPU ise zaman kazandırır, değilse boşuna kalkan yakar."
+    toil: 2
+    cooldown_s: 60
+    effects:
+      - { type: cpu_cost, target: cpu, value: 0.6, from_s: 0, to_s: 60 }
+      - { type: shed_share, value: 0.01, from_s: 0, to_s: 60 }
+    codex: [graceful-degradation]

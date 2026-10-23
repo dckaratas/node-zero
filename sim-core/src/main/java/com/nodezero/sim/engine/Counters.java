@@ -48,12 +48,12 @@ final class Counters {
         }
         // Toil comes out of the same crew as incident actions (decision AG).
         requireCrew(p, def);
-        int cost = def.cost().credits();
+        Rules.CounterRules.Variant variant = counter.variant(command.optionId());
+        int cost = variant.credits();
         if (p.credits() < cost) {
             throw new IllegalArgumentException(
                     "counter " + def.id() + " costs " + cost + " credits, only " + p.credits() + " left");
         }
-        Rules.CounterRules.Variant variant = counter.variant(command.optionId());
         long activeTick = tick + Math.round(variant.applyTimeS() / SimConstants.DT);
         InstalledCounter installed = new InstalledCounter(def.id(), command.optionId(), tick, activeTick);
         // Buying a counter opens its codex entries (decision AB).

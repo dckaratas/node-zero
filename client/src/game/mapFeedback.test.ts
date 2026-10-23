@@ -31,6 +31,13 @@ describe('nodeMarks', () => {
     expect(marks.has('gateway')).toBe(false); // monitoring has no target
   });
 
+  it('uses the build time of the chosen option', () => {
+    const live = { ...item('cpu-up', ['cpu'], 20),
+      options: [{ id: 'live', name: 'Live', credits: 650, applyTimeS: 40, tradeoff: '' }] };
+    const marks = nodeMarks(view([{ ...counter('cpu-up', 400), option: 'live' }], 200), [live], 10);
+    expect(marks.get('cpu')?.progress).toEqual({ ratio: 0.5, removing: false });
+  });
+
   it('shows removal progress and drops a module once it is gone', () => {
     expect(nodeMarks(view([counter('cpu-up', 50, 200)], 175), items, 10).get('cpu')?.progress)
       .toEqual({ ratio: 0.75, removing: true });

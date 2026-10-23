@@ -163,3 +163,20 @@ M/M/c kuyruğunda Erlang-C de aynı üstel sönümü verir. Amaç (kademeli pay,
   (sorgular yine başarısız sayılır). Dalga 5'te cancel-queries 10 sn'lik işi o gün için atlatır; iş ertesi gün döner.
 - Etkilenen testler yeni içeriğe göre güncellendi; "dalga FAILED" beklentileri "kalkan < 0,7" oldu. Golden master
   (dalga 4) içerik nedeniyle yenilendi.
+
+## Ek (Dilim 9b, 2026-10-23): festival (AW, AX, AZ, BA, BB)
+- **AW + AZ (A1):** yeni eylem `kill-switch` (öneri panelini kapat): 60 sn boyunca istek başına CPU ×0,6, isteklerin %1'i
+  başarısız (`cpu_cost`, `shed_share`; yeni BUILD türleri). 2 mürettebat, 60 sn bekleme. Onaylanan %5/30 sn ölçümde
+  kurtarılamaz çıktı: %99 SLO'da %5 düşürmek bütçenin 5 katı. Kodeks: `graceful-degradation` (27 madde).
+  **Sonra (A3):** seçenekli eylem ("önerileri kapat" ×0,8 hatasız / "aramayı kapat" ×0,6 %2 hata).
+- **AX + BB (C2):** CPU büyütmenin seçenekleri: **bakım penceresi** (400 kr, 20 sn, sonda 5 sn geçiş kesintisi) ve
+  **canlı geçiş** (650 kr, 30 sn, kesintisiz). Seçenek artık fiyat da taşıyabilir (`options[].credits`, katalog ve kart).
+  Kurulum/kaldırma kesintisi artık geçişin **son** `value` saniyesinde (önce tüm kurulum boyunca).
+- **BA (B1):** hazırlıksız festival = 0 (istisna). CPU %100'ü geçince kuyruk dolar, isteklerin ~%70'i başarısız olur;
+  1440 isteklik bütçe ~14 sn tam kesinti. Tepe çarpanı 2,2'ye inse de 0. Kapasite planlanır, doğaçlanmaz.
+- `BalanceTest`: dalga 3 hazırlıksız 0,00 (< 0,2), özellik kapatma + canlı geçiş **0,80**, zirvede bakım penceresi 0,00
+  (< 0,2), hazırlıklı 1,00. Diğer dalgalar değişmedi.
+- Bulgu: dalga 2'deki festival duyurusu (`comms.festival_teaser`) hiçbir yerde gösterilmiyordu; dalga temalarının
+  görünürlüğü ayrı dilimde (9c).
+- Yan düzeltme: haritadaki ilerleme halkası seçeneğin kurulum süresini kullanıyor (indeks seçenekleri yanlış oranlanıyordu).
+- Benchmark: `step` ~3 µs.

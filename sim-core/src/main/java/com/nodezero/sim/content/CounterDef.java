@@ -111,11 +111,15 @@ public record CounterDef(
     }
 
     /** Alternative way to apply the same counter, e.g. CREATE INDEX vs CREATE INDEX CONCURRENTLY. */
-    public record CounterOption(
-            String id, LocalizedText name, Double applyTimeS, List<EffectSpec> sideEffect, String tradeoffKey) {
+    /** An option may override the build time and, since slice 9b, the price (a live migration costs more). */
+    public record CounterOption(String id, LocalizedText name, Integer credits, Double applyTimeS,
+            List<EffectSpec> sideEffect, String tradeoffKey) {
         public CounterOption {
             Require.id(id, "options[].id");
             Require.present(name, "options[].name");
+            if (credits != null) {
+                Require.atLeast(credits, 0, "options[].credits");
+            }
             if (applyTimeS != null) {
                 Require.nonNegative(applyTimeS, "options[].apply_time_s");
             }

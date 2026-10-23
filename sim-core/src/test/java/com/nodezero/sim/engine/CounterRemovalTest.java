@@ -37,9 +37,9 @@ class CounterRemovalTest {
     private static GameState installed(String... counters) {
         GameState s = GAME.newState(1);
         for (String c : counters) {
-            s = step(s, new ApplyCounter(c));
+            s = step(s, c.equals("vertical-scale-cpu") ? new ApplyCounter(c, "maintenance") : new ApplyCounter(c));
         }
-        return idle(s, 10);
+        return idle(s, 25);
     }
 
     @Test
@@ -54,9 +54,11 @@ class CounterRemovalTest {
         assertThat(GAME.observe(s).crew()).isEqualTo(crew - 1);
         GameState removing = idle(step(s, new StartWave(1)), 2);
         assertThat(cores(removing)).as("still running while it is taken out").isEqualTo(8);
-        assertThat(GAME.observe(removing).burnRate()).as("downtime, like the upgrade").isGreaterThan(50);
+        assertThat(GAME.observe(removing).burnRate()).as("the smaller VM is prepared first").isZero();
+        GameState cutOver = idle(removing, 15);
+        assertThat(GAME.observe(cutOver).burnRate()).as("cut-over downtime, like the upgrade").isGreaterThan(50);
 
-        GameState done = idle(removing, 5);
+        GameState done = idle(cutOver, 4);
         assertThat(cores(done)).isEqualTo(4);
         assertThat(GAME.observe(done).station().cpuCores()).isEqualTo(4);
         assertThat(done.progress().isInstalled("vertical-scale-cpu")).isFalse();

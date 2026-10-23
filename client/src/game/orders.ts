@@ -17,8 +17,8 @@ export class Orders {
   private readonly pending = new Map<string, PendingOrder>();
   private readonly rejections = new Map<string, string>();
 
-  place(item: CatalogItem): void {
-    this.pending.set(item.id, { counter: item.id, credits: item.credits });
+  place(item: CatalogItem, option?: string): void {
+    this.pending.set(item.id, { counter: item.id, credits: priceOf(item, option) });
     this.rejections.delete(item.id);
   }
 
@@ -87,7 +87,17 @@ export function cardState(item: CatalogItem, view: View, orders: Orders, tickHz:
   const owned = new Set(view.counters.map((c) => c.id));
   const needs = item.requiresCounters.filter((id) => !owned.has(id));
   if (needs.length > 0) return { kind: 'locked', needs };
-  if (item.credits > orders.projectedCredits(view)) return { kind: 'unaffordable' };
+  if (cheapest(item) > orders.projectedCredits(view)) return { kind: 'unaffordable' };
   if (item.toil > view.crew) return { kind: 'no-crew' };
   return { kind: 'available' };
+}
+
+/** The price of the chosen option, or of the counter itself when it has none (slice 9b). */
+export function priceOf(item: CatalogItem, option?: string): number {
+  return item.options.find((o) => o.id === option)?.credits ?? item.credits;
+}
+
+/** A card is affordable when at least one of its options is. */
+function cheapest(item: CatalogItem): number {
+  return item.options.length === 0 ? item.credits : Math.min(...item.options.map((o) => o.credits));
 }

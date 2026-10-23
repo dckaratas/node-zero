@@ -85,11 +85,13 @@
     "options" : [ {
       "id" : "blocking",
       "name" : "CREATE INDEX",
+      "credits" : 200,
       "applyTimeS" : 10.0,
       "tradeoff" : "Fast to build, but blocks writes on the table while it runs."
     }, {
       "id" : "concurrently",
       "name" : "CREATE INDEX CONCURRENTLY",
+      "credits" : 200,
       "applyTimeS" : 40.0,
       "tradeoff" : "No write lock, but slower and adds database I/O while it builds."
     } ],

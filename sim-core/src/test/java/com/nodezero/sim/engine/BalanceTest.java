@@ -12,6 +12,7 @@ import com.nodezero.sim.state.ResourceId;
 import com.nodezero.sim.state.WaveState;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -19,7 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  * Balance bands of chapter 1 (ADR-0018 AY). Each threat wave is played on a station where every earlier threat
  * was fixed in preparation, so one wave is measured at a time:
  * <ul>
- *   <li>unprepared: the wave hurts but does not wipe the shield (0.2..0.6);</li>
+ *   <li>unprepared: the wave hurts but does not wipe the shield (0.2..0.6), except the festival (see below);</li>
  *   <li>reactive: the right incident action plus the fix bought at the first symptom keeps at least 0.7;</li>
  *   <li>prepared: the fix installed before the wave keeps the shield full.</li>
  * </ul>
@@ -35,7 +36,7 @@ class BalanceTest {
     private static Command fix(int wave) {
         return switch (wave) {
             case 2 -> new ApplyCounter("log-level-info");
-            case 3 -> new ApplyCounter("vertical-scale-cpu");
+            case 3 -> new ApplyCounter("vertical-scale-cpu", "maintenance");
             case 4 -> new ApplyCounter("create-index", "concurrently");
             case 5 -> new ApplyCounter("reschedule-job");
             default -> throw new IllegalArgumentException("no threat in wave " + wave);
@@ -43,11 +44,16 @@ class BalanceTest {
     }
 
     /**
-     * The fix bought under fire. Wave 4 takes the blocking index: 10 s of write lock beat 40 s of a pool that is
-     * already exhausted, the opposite of the right choice in preparation.
+     * The fix bought under fire, often the opposite of the right choice in preparation. Wave 3 takes the live
+     * migration: the cheap upgrade's cut-over would fall on the peak. Wave 4 takes the blocking index: 10 s of
+     * write lock beat 40 s of a pool that is already exhausted.
      */
     private static Command lateFix(int wave) {
-        return wave == 4 ? new ApplyCounter("create-index", "blocking") : fix(wave);
+        return switch (wave) {
+            case 3 -> new ApplyCounter("vertical-scale-cpu", "live");
+            case 4 -> new ApplyCounter("create-index", "blocking");
+            default -> fix(wave);
+        };
     }
 
     /**
@@ -60,6 +66,7 @@ class BalanceTest {
         }
         return switch (wave) {
             case 2 -> disk(s) >= 0.95 * 100 ? List.of(new RunAction("clear-disk", "truncate")) : List.of();
+            case 3 -> List.of(new RunAction("kill-switch"));
             case 5 -> List.of(new RunAction("cancel-queries"));
             default -> List.of();
         };
@@ -134,11 +141,15 @@ class BalanceTest {
     }
 
     static double reactive(int wave) {
+        return reactive(wave, lateFix(wave));
+    }
+
+    static double reactive(int wave, Command lateFix) {
         return shield(play(before(wave), wave, (s, o) -> {
             List<Command> c = new ArrayList<>(mitigate(wave, s, o));
             // The symptom the player reacts to: the shield visibly burning (the HUD shows it from x0.1).
             if (o.burnRate() >= 1) {
-                c.add(lateFix(wave));
+                c.add(lateFix);
             }
             return c;
         }));
@@ -148,15 +159,25 @@ class BalanceTest {
         return shield(play(prepare(before(wave), wave), wave, (s, o) -> List.of()));
     }
 
-    // Wave 3 (the CPU surge) gets its unprepared and reactive bands with its mitigation in slice 9b (AW/AX).
     @ParameterizedTest(name = "wave {0}")
     @ValueSource(ints = {2, 4, 5})
     void anUnpreparedWaveHurtsButLeavesSomeShield(int wave) {
         assertThat(unprepared(wave)).isBetween(0.2, 0.6);
     }
 
+    /**
+     * The festival is the exception (ADR-0018 BA, BB): above 100 % CPU the accept queue fills and most requests
+     * fail, so an unplanned surge empties the shield. It is announced a wave ahead; capacity is planned, not
+     * improvised. The cheap upgrade bought at the peak makes it worse, its cut-over is downtime at full traffic.
+     */
+    @Test
+    void theFestivalPunishesImprovisedCapacity() {
+        assertThat(unprepared(3)).isLessThan(0.2);
+        assertThat(reactive(3, new ApplyCounter("vertical-scale-cpu", "maintenance"))).isLessThan(0.2);
+    }
+
     @ParameterizedTest(name = "wave {0}")
-    @ValueSource(ints = {2, 4, 5})
+    @ValueSource(ints = {2, 3, 4, 5})
     void theRightActionAndALateFixSaveTheWave(int wave) {
         assertThat(reactive(wave)).isGreaterThanOrEqualTo(0.7);
     }

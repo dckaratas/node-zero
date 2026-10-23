@@ -69,7 +69,7 @@ class ActionTest {
 
     @Test
     void countersWithToilUseTheSameCrewAndAFinishedWaveRestsIt() {
-        GameState s = step(GAME.newState(1), new ApplyCounter("vertical-scale-cpu")); // toil 1
+        GameState s = step(GAME.newState(1), new ApplyCounter("vertical-scale-cpu", "maintenance")); // toil 1
         assertThat(GAME.observe(s).crew()).isEqualTo(7);
 
         s = step(s, new StartWave(1));

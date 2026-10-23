@@ -123,6 +123,18 @@ codex:
 
         Çözüm sonra, neden bilinince gelir: bir indeks, daha fazla kapasite, ayrı bir havuz. İyi postmortemler ikisini ayırır. "Restart ettik, geçti" bir yatıştırmadır, kök neden değil.
 
+  - id: graceful-degradation
+    title: { en: "Graceful degradation", tr: "Kontrollü işlev kaybı" }
+    body:
+      en: |-
+        When demand outruns capacity, a service can still choose what to give up. Feature flags (kill switches) turn off expensive extras such as recommendations, search suggestions or live counters, so the core path keeps its CPU. The users of the switched-off feature see an error or an empty panel, a smaller failure than a whole service timing out.
+
+        It is a mitigation: it buys the minutes a capacity change needs, and it only helps if the switched-off work was on the bottleneck. Switching off features while the database is the problem just loses them.
+      tr: |-
+        Talep kapasiteyi aşınca servis neyden vazgeçeceğini yine de seçebilir. Feature flag (kill switch) öneriler, arama önerileri, canlı sayaçlar gibi pahalı ekstraları kapatır; ana yol CPU'sunu korur. Kapatılan özelliğin kullanıcıları hata ya da boş bir panel görür; bu, tüm servisin zaman aşımına düşmesinden küçük bir kayıptır.
+
+        Bir yatıştırmadır: kapasite değişikliğinin gerektirdiği dakikaları kazandırır ve sadece kapatılan iş darboğazın üzerindeyse işe yarar. Sorun veritabanındayken özellik kapatmak sadece onları kaybettirir.
+
   - id: deleted-open-files
     title: { en: "Deleted but still open", tr: "Silinmiş ama hâlâ açık" }
     body:

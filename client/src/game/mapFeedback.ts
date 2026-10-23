@@ -35,7 +35,8 @@ export function nodeMarks(view: View, items: readonly CatalogItem[], tickHz: num
     if (item === undefined) continue;
     const removing = counter.removedTick >= 0;
     if (removing && view.tick >= counter.removedTick) continue;
-    const durationTicks = item.applyTimeS * tickHz;
+    const option = item.options.find((o) => o.id === counter.option);
+    const durationTicks = (option?.applyTimeS ?? item.applyTimeS) * tickHz;
     const endTick = removing ? counter.removedTick : counter.readyTick;
     const inProgress = durationTicks > 0 && view.tick < endTick;
     for (const node of item.nodes) {
