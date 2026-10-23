@@ -37,7 +37,7 @@ export class Hud {
   private nextWave = 1;
   private crewMax = 0;
 
-  constructor(top: HTMLElement, panel: HTMLElement, send: (action: ClientAction) => void) {
+  constructor(top: HTMLElement, panel: HTMLElement, metricsHost: HTMLElement, send: (action: ClientAction) => void) {
     this.shield.setAttribute('role', 'meter');
     this.shield.setAttribute('aria-label', 'Error budget');
     this.shield.setAttribute('aria-valuemin', '0');
@@ -52,8 +52,9 @@ export class Hud {
       this.language);
     // Codex above the long module list: closed articles are one line each.
     panel.append(heading('Signals'), this.signals, this.notice, heading('Alerts'), this.alertsHost,
-      heading('Incident response'), this.actionsHost, this.codexHost, heading('Modules'), this.countersHost,
-      heading('Metrics'), this.metrics);
+      heading('Incident response'), this.actionsHost, this.codexHost, heading('Modules'), this.countersHost);
+    // Metrics float over the map's lower left corner, next to what they measure.
+    metricsHost.append(this.metrics);
 
     this.startWave.onclick = () => send({ type: 'start_wave', wave: this.nextWave });
     this.pause.onclick = () => send(this.paused ? { type: 'resume' } : { type: 'pause' });

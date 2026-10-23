@@ -8,8 +8,12 @@
   <body>
     <header id="hud" class="hud" aria-live="polite"></header>
     <main class="layout">
-      <section id="map" class="map" aria-label="Station NODE-01"></section>
-      <aside id="panel" class="panel" aria-label="Metrics"></aside>
+      <section id="map" class="map" aria-label="Station NODE-01">
+        <details id="metrics" class="metrics-panel" open>
+          <summary>Metrics</summary>
+        </details>
+      </section>
+      <aside id="panel" class="panel" aria-label="Operations"></aside>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -68,6 +68,7 @@ const connection = new Connection(Connection.defaultUrl(), {
         codexPanel.reset();
         catalog.load(session, language);
         hud.setPaused(false);
+        map.setPaused(false);
         hud.showNotice(`Session ${message.session.slice(0, 8)} · seed ${message.seed}`);
         break;
       case 'snapshot': {
@@ -96,6 +97,7 @@ const connection = new Connection(Connection.defaultUrl(), {
       }
       case 'paused':
         hud.setPaused(message.paused);
+        map.setPaused(message.paused);
         break;
       case 'rejected':
         // A refused purchase shows on its card; anything else goes to the notice line.
@@ -118,7 +120,9 @@ function send(action: ClientAction): boolean {
   return false;
 }
 
-const hud = new Hud(byId('hud'), byId('panel'), send);
+const hud = new Hud(byId('hud'), byId('panel'), byId('metrics'), send);
+// On a phone the open metrics would cover the station; they start folded there.
+if (window.matchMedia('(max-width: 720px)').matches) byId('metrics').removeAttribute('open');
 const panel = new CounterPanel(hud.countersHost, orders, (item, option) => {
   const action: ClientAction = { type: 'apply_counter', counter: item.id };
   if (option !== undefined) action.option = option;

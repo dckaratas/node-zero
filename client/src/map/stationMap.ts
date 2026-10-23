@@ -3,12 +3,25 @@ import type { View } from '../game/store';
 import { queueDots, redDots, type NodeMarks } from '../game/mapFeedback';
 import { LINKS, loadColor, NODE01, NODES, type StationNode } from '../game/station';
 import { hexCorners, hexToPixel, type Point } from './hex';
+import { domeLook, incomingDots } from './shieldDome';
 
 /** Grid spacing; hexes are drawn smaller so the pipes between them show. */
 const HEX_SIZE = 72;
 const DRAWN_SIZE = 54;
 const FLOW_DOTS = 6;
 const DOWN_COLOR = 0x2a2f3d;
+/** Incoming requests in flight, how far out they start, and their trip time in seconds. */
+const INCOMING_DOTS = 28;
+const INCOMING_FROM = 220;
+const INCOMING_TRIP_S = 2.4;
+
+/** The dome around the station: an ellipse with a soft band fading inwards from its edge. */
+interface Dome {
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+}
 
 interface NodeSprite {
   node: StationNode;
@@ -25,15 +38,25 @@ interface NodeSprite {
  * Hexes are redrawn each frame from the interpolated view; with seven nodes that is cheaper than
  * diffing. Request flow is shown as dots moving along the pipes, faster with more traffic, and only
  * when the request rate is measurable; a share of them turns red with the measured error rate (slice 8b).
+ * A translucent dome (the error budget as a shield) surrounds the station; while a wave runs requests fly in
+ * from outside and land on it, and they freeze while the game is paused.
  */
 export class StationMap {
   private readonly app = new Application();
   private readonly world = new Container();
   private readonly pipes = new Graphics();
+  private readonly dome = new Graphics();
+  private readonly incoming = new Graphics();
+  private readonly pausedLabel = new Text({ text: 'PAUSED', style: { fill: 0xffd166, fontSize: 16, fontWeight: 'bold',
+    fontFamily: 'system-ui', letterSpacing: 3 } });
   private readonly flow = new Graphics();
   private readonly sprites: NodeSprite[] = [];
   private flowPhase = 0;
   private alertPhase = 0;
+  private incomingPhase = 0;
+  private domePhase = 0;
+  private paused = false;
+  private shape: Dome = { x: 0, y: 0, rx: 1, ry: 1 };
   /** Invisible DOM buttons over the hexes (decision AS): mouse, touch, keyboard and screen readers alike. */
   private readonly buttons = new Map<string, HTMLButtonElement>();
   private selected: string | null = null;
@@ -47,7 +70,7 @@ export class StationMap {
     overlay.className = 'map-nodes';
     host.appendChild(overlay);
     this.app.stage.addChild(this.world);
-    this.world.addChild(this.pipes, this.flow);
+    this.world.addChild(this.dome, this.incoming, this.pipes, this.flow);
 
     for (const node of NODES) {
       const centre = hexToPixel(node.hex, HEX_SIZE);
@@ -73,6 +96,10 @@ export class StationMap {
       overlay.append(button);
       this.buttons.set(node.id, button);
     }
+    this.shape = this.measureDome();
+    this.pausedLabel.anchor.set(0.5);
+    this.pausedLabel.position.set(this.shape.x, this.shape.y - this.shape.ry - 18);
+    this.world.addChild(this.pausedLabel);
     this.drawPipes();
     this.centre();
     this.app.renderer.on('resize', () => this.centre());
@@ -88,6 +115,9 @@ export class StationMap {
   render(view: View | undefined, deltaMs: number, alerting: ReadonlySet<string> = new Set(),
     marks: ReadonlyMap<string, NodeMarks> = new Map()): void {
     const metrics = view?.metrics ?? {};
+    // Nothing moves on the map while the game is paused.
+    const flowMs = this.paused ? 0 : deltaMs;
+    this.drawDome(view, deltaMs);
     this.alertPhase = (this.alertPhase + deltaMs / 600) % (2 * Math.PI);
     const pulse = 0.55 + 0.45 * Math.sin(this.alertPhase);
     for (const s of this.sprites) {
@@ -106,7 +136,12 @@ export class StationMap {
         : load === undefined ? (s.node.id === 'gateway' ? '' : '?') : `${Math.round(load * 100)}%`;
       this.drawMarks(s, m, s.node.id === 'db_pool' ? queueDots(metrics['hikaricp_connections_pending']) : 0);
     }
-    this.drawFlow(metrics['request_rate'], metrics['error_rate'], deltaMs);
+    this.drawFlow(metrics['request_rate'], metrics['error_rate'], flowMs);
+  }
+
+  /** The server paused or resumed the session. */
+  setPaused(paused: boolean): void {
+    this.paused = paused;
   }
 
   /** The player picked a node (or {@code null} to close the inspector). */
@@ -127,6 +162,46 @@ export class StationMap {
       this.pipes.moveTo(a.x, a.y).lineTo(b.x, b.y);
     }
     this.pipes.stroke({ width: 6, color: 0x26304a });
+  }
+
+  private measureDome(): Dome {
+    const xs = this.sprites.map((s) => s.centre.x);
+    const ys = this.sprites.map((s) => s.centre.y);
+    const minX = Math.min(...xs) - DRAWN_SIZE;
+    const maxX = Math.max(...xs) + DRAWN_SIZE;
+    const minY = Math.min(...ys) - DRAWN_SIZE;
+    const maxY = Math.max(...ys) + DRAWN_SIZE;
+    // Wide enough that the corners of the station's bounding box stay inside the ellipse.
+    return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, rx: (maxX - minX) * 0.66 + 16, ry: (maxY - minY) * 0.66 + 16 };
+  }
+
+  private drawDome(view: View | undefined, deltaMs: number): void {
+    const look = domeLook(view?.phase, view?.shield ?? 1, this.paused);
+    const { x, y, rx, ry } = this.shape;
+    if (look.moving) {
+      this.domePhase = (this.domePhase + deltaMs / 900) % (2 * Math.PI);
+      this.incomingPhase += deltaMs / 1000 / INCOMING_TRIP_S;
+    }
+    const edge = look.alpha * (look.moving ? 0.85 + 0.15 * Math.sin(this.domePhase) : 1);
+    // Only the rim and a thin band inside it: the station stays readable.
+    this.dome.clear();
+    for (let i = 4; i >= 1; i--) {
+      const inset = i * 7;
+      this.dome.ellipse(x, y, rx - inset, ry - inset).stroke({ width: 7, color: look.color, alpha: edge * 0.07 * (5 - i) });
+    }
+    this.dome.ellipse(x, y, rx, ry).stroke({ width: 2, color: look.color, alpha: edge });
+    this.pausedLabel.visible = this.paused && view?.phase === 'RUNNING';
+
+    this.incoming.clear();
+    if (!look.incoming) return;
+    for (const dot of incomingDots(this.incomingPhase, INCOMING_DOTS)) {
+      const cos = Math.cos(dot.angle);
+      const sin = Math.sin(dot.angle);
+      const out = INCOMING_FROM * (1 - dot.t);
+      // Fades in from the dark and lands on the rim.
+      this.incoming.circle(x + (rx + out) * cos, y + (ry + out) * sin, 2.5)
+        .fill({ color: 0x7fd4ff, alpha: Math.min(1, dot.t * 2.5) });
+    }
   }
 
   private drawMarks(s: NodeSprite, m: NodeMarks | undefined, queued: number): void {
@@ -175,8 +250,9 @@ export class StationMap {
   }
 
   private centre(): void {
-    // Fit the station into the canvas with a margin, never enlarging past 1:1.
-    const bounds = this.world.getLocalBounds();
+    // Fit the dome into the canvas with a margin, never enlarging past 1:1; incoming dots may start off screen.
+    const { x, y, rx, ry } = this.shape;
+    const bounds = { x: x - rx, y: y - ry - 30, width: 2 * rx, height: 2 * ry + 30 };
     const { width, height } = this.app.screen;
     const scale = Math.min(1, (width * 0.9) / bounds.width, (height * 0.9) / bounds.height);
     this.world.scale.set(scale);
