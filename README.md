@@ -65,3 +65,7 @@ CI runs `npm audit`, and only security fixes trigger an upgrade.
 - [Game Design Document](docs/GDD.md)
 - [Architecture Decision Records](docs/adr/): determinism, latency model, performance budget, server and client architecture, incident gameplay
 - [Learning notes](docs/learning-notes.md)
+
+## License
+
+[MIT](LICENSE)

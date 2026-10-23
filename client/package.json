@@ -1,6 +1,7 @@
 {
   "name": "node-zero-client",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "type": "module",
   "description": "Node Zero browser client: PixiJS station map + DOM HUD over the game server's WebSocket.",
