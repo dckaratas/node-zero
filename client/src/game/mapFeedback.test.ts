@@ -14,7 +14,7 @@ function item(id: string, nodes: string[], applyTimeS = 10): CatalogItem {
 function view(counters: InstalledCounter[], tick: number, appDown = false): View {
   return { tick, credits: 0, wave: 0, phase: 'PREPARATION', shield: 1, burnRate: 0, shieldEmptyInS: -1, metrics: {},
     signals: [], insights: [], counters, postmortem: null, codex: [], results: [], chapter: null, crew: 8, actions: [],
-    alerts: [], station: { ...NODE01, appDown } };
+    alerts: [], station: { ...NODE01, appDown }, briefing: null };
 }
 
 const counter = (id: string, readyTick: number, removedTick = -1): InstalledCounter =>

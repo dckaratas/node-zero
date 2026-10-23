@@ -74,7 +74,24 @@ final class Observer {
                 p.postmortem());
         return new Observation(s.tick(), p.credits(), wave.number(), wave.phase(), shield, burnRate, emptyInS,
                 metrics, signals, p.insights(), counters, postmortem(p), p.codex(), p.results(), chapter,
-                p.ops().crew(), p.ops().runs(), p.ops().alerts(), station(s));
+                p.ops().crew(), p.ops().runs(), p.ops().alerts(), station(s), briefing(wave));
+    }
+
+    private Observation.Briefing briefing(WaveState wave) {
+        int next = wave.phase() == WaveState.Phase.RUNNING ? wave.number() : wave.number() + 1;
+        if (next > rules.lastWave()) {
+            return null;
+        }
+        ThreatDef threat = rules.threatForWave(next);
+        List<String> comms = new ArrayList<>();
+        for (ThreatDef t : rules.content().threats().values()) {
+            ThreatDef.Warning warning = t.trigger().warning();
+            if (warning != null && warning.wave() == next) {
+                comms.add(warning.textKey());
+            }
+        }
+        return new Observation.Briefing(next, threat == null ? ThreatDef.QUIET_BRIEFING_KEY : threat.trigger().briefingKey(),
+                comms);
     }
 
     private Observation.Station station(GameState s) {

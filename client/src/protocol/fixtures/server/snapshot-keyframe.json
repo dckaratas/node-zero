@@ -57,5 +57,10 @@
     "dbCpuCores" : 4,
     "dbIoDisks" : 1,
     "appDown" : false
+  },
+  "briefing" : {
+    "wave" : 1,
+    "eventKey" : "briefing.quiet",
+    "comms" : [ ]
   }
 }

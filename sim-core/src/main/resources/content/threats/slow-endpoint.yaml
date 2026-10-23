@@ -5,7 +5,7 @@ threat:
   name: { en: "Archive Drift", tr: "Arşiv Kayması" }
   chapter: 1
   persists: true   # the table keeps growing after the wave
-  trigger: { wave: 4, event: data-growth }
+  trigger: { wave: 4, event: data-growth, briefing_key: briefing.data_growth }
   data: { table: orders, initial_rows: 500000, rows_per_second: 4750 }
   traffic:
     baseline_rps: 100

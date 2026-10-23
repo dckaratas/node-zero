@@ -1,5 +1,5 @@
 import type {
-  ActionRun, AlertRule, ChapterSummary, InstalledCounter, Phase, Postmortem, Snapshot, StationCapacity, WaveResult,
+  ActionRun, AlertRule, Briefing, ChapterSummary, InstalledCounter, Phase, Postmortem, Snapshot, StationCapacity, WaveResult,
 } from '../protocol/messages';
 import { NODE01 } from './station';
 
@@ -24,6 +24,7 @@ export interface View {
   actions: readonly ActionRun[];
   alerts: readonly AlertRule[];
   station: StationCapacity;
+  briefing: Briefing | null;
 }
 
 /**
@@ -72,6 +73,7 @@ export class GameStore {
       actions: s.actions ?? base?.actions ?? [],
       alerts: s.alerts ?? base?.alerts ?? [],
       station: s.station ?? base?.station ?? NODE01,
+      briefing: s.briefing ?? base?.briefing ?? null,
     };
     this.previous = base ?? view;
     this.latest = view;

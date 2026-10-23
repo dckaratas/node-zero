@@ -61,6 +61,15 @@ export interface Snapshot {
   alerts?: AlertRule[];
   /** The station's capacities; absent when unchanged (delta field). */
   station?: StationCapacity;
+  /** What the player is told about the next wave; absent when unchanged or when no wave is left (delta field). */
+  briefing?: Briefing;
+}
+
+/** The next wave's event and comms as text keys (slice 9c): what a change calendar would say, never the root cause. */
+export interface Briefing {
+  wave: number;
+  eventKey: string;
+  comms: string[];
 }
 
 /** What NODE-01 is built of; structural counters change it. */
@@ -382,6 +391,13 @@ function catalogAction(v: unknown, path: string): CatalogAction {
   };
 }
 
+function briefing(v: unknown, path: string): Briefing {
+  const o = object(v, path);
+  keys(o, path, ['wave', 'eventKey', 'comms']);
+  return { wave: num(o['wave'], `${path}.wave`), eventKey: str(o['eventKey'], `${path}.eventKey`),
+    comms: strings(o['comms'], `${path}.comms`) };
+}
+
 function stationCapacity(v: unknown, path: string): StationCapacity {
   const o = object(v, path);
   keys(o, path, ['cpuCores', 'threads', 'dbPool', 'diskMb', 'dbCpuCores', 'dbIoDisks', 'appDown']);
@@ -509,7 +525,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
     case 'snapshot': {
       keys(o, 'snapshot', ['type', 'tick', 'credits', 'wave', 'phase', 'shield', 'burnRate', 'shieldEmptyInS',
         'metrics', 'signals', 'crew'], ['insights', 'counters', 'postmortem', 'codex', 'results', 'chapter', 'actions',
-        'alerts', 'station']);
+        'alerts', 'station', 'briefing']);
       const phase = str(o['phase'], 'snapshot.phase');
       if (!PHASES.includes(phase)) throw new ProtocolError(`snapshot.phase: unknown ${phase}`);
       const s: Snapshot = {
@@ -534,6 +550,7 @@ export function parseServerMessage(v: unknown): ServerMessage {
       if (o['actions'] !== undefined) s.actions = list(o['actions'], 'snapshot.actions', actionRun);
       if (o['alerts'] !== undefined) s.alerts = list(o['alerts'], 'snapshot.alerts', alertRule);
       if (o['station'] !== undefined) s.station = stationCapacity(o['station'], 'snapshot.station');
+      if (o['briefing'] !== undefined) s.briefing = briefing(o['briefing'], 'snapshot.briefing');
       return s;
     }
     case 'rejected':

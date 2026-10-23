@@ -19,7 +19,7 @@ class SnapshotStreamTest {
         metrics.put("node_cpu_utilization", cpu);
         return new Observation(tick, 1000, 0, WaveState.Phase.PREPARATION, 1.0, 0, -1, metrics,
                 List.of(), List.of(), counters, null, List.of(), List.of(), null, 8, List.of(), List.of(),
-                new Observation.Station(4, 200, 10, 100, 4, 1, false));
+                new Observation.Station(4, 200, 10, 100, 4, 1, false), new Observation.Briefing(1, "briefing.quiet", List.of()));
     }
 
     @Test

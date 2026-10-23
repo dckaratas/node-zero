@@ -4,7 +4,7 @@ threat:
   name: { en: "Log Storm", tr: "Log Fırtınası" }
   chapter: 1
   persists: true   # DEBUG logging stays on until someone fixes it
-  trigger: { wave: 2, event: deploy }
+  trigger: { wave: 2, event: deploy, briefing_key: briefing.deploy }
   traffic:
     baseline_rps: 100
     shape:

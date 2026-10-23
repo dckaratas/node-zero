@@ -36,5 +36,10 @@
     "dbCpuCores" : 4,
     "dbIoDisks" : 1,
     "appDown" : true
+  },
+  "briefing" : {
+    "wave" : 2,
+    "eventKey" : "briefing.deploy",
+    "comms" : [ "comms.festival_teaser" ]
   }
 }

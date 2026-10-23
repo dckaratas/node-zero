@@ -6,6 +6,7 @@ threat:
   trigger:
     wave: 3
     event: marketing-campaign
+    briefing_key: briefing.campaign
     warning: { wave: 2, channel: comms, text_key: comms.festival_teaser }
   traffic:
     baseline_rps: 100

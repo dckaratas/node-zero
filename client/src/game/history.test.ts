@@ -6,7 +6,7 @@ import type { View } from './store';
 function view(cpu: number | undefined): View {
   return { tick: 0, credits: 0, wave: 0, phase: 'RUNNING', shield: 1, burnRate: 0, shieldEmptyInS: -1,
     metrics: cpu === undefined ? {} : { cpu_utilization: cpu }, signals: [], insights: [], counters: [],
-    postmortem: null, codex: [], results: [], chapter: null, crew: 8, actions: [], alerts: [], station: NODE01 };
+    postmortem: null, codex: [], results: [], chapter: null, crew: 8, actions: [], alerts: [], station: NODE01, briefing: null };
 }
 
 describe('LoadHistory', () => {

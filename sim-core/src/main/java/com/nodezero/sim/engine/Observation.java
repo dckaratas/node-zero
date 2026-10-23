@@ -50,7 +50,8 @@ public record Observation(
         int crew,
         List<ActionRun> actions,
         List<AlertRule> alerts,
-        Station station) {
+        Station station,
+        Briefing briefing) {
 
     /**
      * A root-cause question after a threat wave (ADR-0007/0008). Texts are keys (ADR-0009).
@@ -78,6 +79,18 @@ public record Observation(
      */
     public record Station(int cpuCores, int threads, int dbPool, double diskMb, int dbCpuCores, int dbIoDisks,
             boolean appDown) {}
+
+    /**
+     * What the player is told about the next wave (slice 9c, decisions CA/CB): the event, never the root cause,
+     * and station comms announced for it (the festival teaser). Texts are keys. While a wave runs it describes
+     * that wave; {@code null} once the chapter has no wave left.
+     */
+    public record Briefing(int wave, String eventKey, List<String> comms) {
+
+        public Briefing {
+            comms = List.copyOf(comms);
+        }
+    }
 
     /** One answer option; {@code key} is its text key. */
     public record Choice(String id, String key) {}

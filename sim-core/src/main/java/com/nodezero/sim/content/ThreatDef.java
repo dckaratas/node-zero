@@ -27,6 +27,9 @@ public record ThreatDef(
         Postmortem postmortem,
         List<String> codex) {
 
+    /** What the briefing says before a wave without a threat (slice 9c). */
+    public static final String QUIET_BRIEFING_KEY = "briefing.quiet";
+
     public ThreatDef {
         Require.id(id, "id");
         Require.present(name, "name");
@@ -55,6 +58,7 @@ public record ThreatDef(
     /** Every i18n key this threat references; each must exist in all languages. */
     public List<String> textKeys() {
         List<String> keys = new ArrayList<>();
+        keys.add(trigger.briefingKey());
         if (trigger.warning() != null) {
             keys.add(trigger.warning().textKey());
         }
@@ -64,10 +68,15 @@ public record ThreatDef(
         return List.copyOf(keys);
     }
 
-    public record Trigger(int wave, String event, Schedule schedule, Warning warning) {
+    /**
+     * When the threat arrives. {@code briefing_key} names the event the player is told about before the wave
+     * (a deploy, a campaign), never the root cause (slice 9c, ADR-0018 CA).
+     */
+    public record Trigger(int wave, String event, String briefingKey, Schedule schedule, Warning warning) {
         public Trigger {
             Require.atLeast(wave, 1, "trigger.wave");
             Require.id(event, "trigger.event");
+            Require.textKey(briefingKey, "trigger.briefing_key");
         }
     }
 

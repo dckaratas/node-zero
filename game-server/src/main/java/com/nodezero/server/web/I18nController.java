@@ -24,7 +24,7 @@ import org.springframework.web.context.request.WebRequest;
 @RestController
 class I18nController {
 
-    private static final String[] PUBLIC_PREFIXES = {"pm.", "hint.", "comms."};
+    private static final String[] PUBLIC_PREFIXES = {"pm.", "hint.", "comms.", "briefing."};
 
     private final Map<Language, Map<String, String>> bundles = new EnumMap<>(Language.class);
     private final Map<Language, String> etags = new EnumMap<>(Language.class);

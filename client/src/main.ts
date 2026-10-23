@@ -3,6 +3,7 @@ import { loadLanguage, saveLanguage, type ContentLanguage } from './game/languag
 import { Orders } from './game/orders';
 import { Review } from './game/postmortem';
 import { firingNodes } from './game/alerts';
+import { started } from './game/briefing';
 import { LoadHistory } from './game/history';
 import { nodeMarks } from './game/mapFeedback';
 import { nodeById } from './game/station';
@@ -11,6 +12,7 @@ import { GameStore } from './game/store';
 import { ActionPanel } from './hud/actionPanel';
 import { AlertBanner } from './hud/alertBanner';
 import { AlertPanel } from './hud/alertPanel';
+import { BriefingCard } from './hud/briefingCard';
 import { ChapterDialog } from './hud/chapterDialog';
 import { CodexPanel } from './hud/codexPanel';
 import { CounterPanel } from './hud/counterPanel';
@@ -73,6 +75,8 @@ const connection = new Connection(Connection.defaultUrl(), {
         const view = store.apply(message, performance.now());
         history.record(view);
         // Threshold toasts and the collapse notice (decision AD); compared on raw views, not blended ones.
+        const startedWave = started(before, view);
+        if (startedWave !== null) briefing.flash(startedWave, performance.now());
         const alert = shieldAlert(before, view);
         if (alert !== null) shieldAlerts.show(alert, view.wave, performance.now());
         orders.confirm(view.counters);
@@ -146,6 +150,7 @@ const postmortem = new PostmortemDialog(review, texts, (wave, option) => {
 });
 const alertPanel = new AlertPanel(hud.alertsHost, send);
 const alertBanner = new AlertBanner();
+const briefing = new BriefingCard((key) => texts.t(key));
 const inspector = new Inspector(byId('panel'), history, () => moduleNames, (metric) => alertPanel.prefill(metric),
   () => map.select(null));
 map.onNodeSelected((id) => {
@@ -167,6 +172,7 @@ map.ticker.add((ticker) => {
   alertPanel.render(store.current());
   inspector.render(store.current());
   alertBanner.render(store.current()?.alerts ?? []);
+  briefing.render(store.current(), now);
   const latest = store.current();
   // The collapse notice comes first; the summary waits until the last postmortem is closed.
   postmortem.render(shieldAlerts.blocking(now) ? null : latest?.postmortem ?? null);
@@ -182,7 +188,10 @@ hud.onLanguageChange((next) => {
   saveLanguage(next);
   hud.setContentLanguage(next);
   texts.load(next)
-    .then(() => postmortem.setLanguage(next))
+    .then(() => {
+      postmortem.setLanguage(next);
+      briefing.refresh();
+    })
     .catch((e: unknown) => {
       console.error(e);
       hud.showNotice('Could not load texts');

@@ -147,6 +147,7 @@ public final class ContentLoader {
         Map<String, String> owners = new LinkedHashMap<>();
         threats.values().forEach(t -> t.textKeys().forEach(k -> owners.putIfAbsent(k, "threat " + t.id())));
         counters.values().forEach(c -> c.textKeys().forEach(k -> owners.putIfAbsent(k, "counter " + c.id())));
+        owners.putIfAbsent(ThreatDef.QUIET_BRIEFING_KEY, "the briefing of quiet waves");
 
         for (Language language : Language.values()) {
             Map<String, String> texts = messages.in(language);

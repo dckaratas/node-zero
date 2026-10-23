@@ -147,7 +147,7 @@ class ContentLoaderValidationTest {
                   id: test-threat
                   name: { en: "Test", tr: "Deneme" }
                   chapter: 1
-                  trigger: { wave: 1, event: deploy }
+                  trigger: { wave: 1, event: deploy, briefing_key: briefing.test }
                   traffic:
                     baseline_rps: 100
                     shape:
@@ -191,12 +191,16 @@ class ContentLoaderValidationTest {
                 """);
         files.put("i18n/en.yaml", """
                 pm.test.q: "Why?"
+                briefing.test: "Deploy"
+                briefing.quiet: "Quiet"
                 pm.test.a: "A"
                 pm.test.b: "B"
                 tradeoff.test: "T"
                 """);
         files.put(TR, """
                 pm.test.q: "Neden?"
+                briefing.test: "Deploy"
+                briefing.quiet: "Sakin"
                 pm.test.a: "A"
                 pm.test.b: "B"
                 tradeoff.test: "T"

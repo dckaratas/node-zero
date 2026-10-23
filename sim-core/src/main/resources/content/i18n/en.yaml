@@ -1,6 +1,12 @@
 # Content texts (EN). Every key must also exist in tr.yaml; the loader rejects unused keys.
 
 comms.festival_teaser: "Marketing: big news for the colonies next cycle. Stay tuned!"
+
+briefing.quiet: "Quiet shift: no known changes. A good moment to prepare."
+briefing.deploy: "Change calendar: release 2.3 goes live this shift."
+briefing.campaign: "Marketing: the Colony Festival campaign starts. Expected traffic: 3x normal for about a minute."
+briefing.data_growth: "Data: the archive table grows by thousands of rows every minute."
+briefing.cron: "Scheduled job: the nightly report runs at 03:00 station time."
 hint.lb_needs_two_nodes: "A load balancer needs at least two nodes. Unlocks in Chapter 3."
 hint.replica_needs_two_nodes: "A read replica needs a second database node. Unlocks in Chapter 3."
 

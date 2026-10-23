@@ -36,7 +36,7 @@ public sealed interface ServerMessage {
     /**
      * The player's fog-of-war view ({@link Observation}), flattened. Sent only when something changed
      * ({@link SnapshotStream}); {@code insights}, {@code counters}, {@code codex}, {@code results},
-     * {@code actions}, {@code alerts} and {@code station} are omitted (null) when unchanged since the
+     * {@code actions}, {@code alerts}, {@code station} and {@code briefing} are omitted (null) when unchanged since the
      * previous snapshot, so the client keeps its last copy. {@code postmortem} is sent whenever one is open
      * or just answered, and absent otherwise; {@code chapter} likewise once the chapter is won.
      */
@@ -60,14 +60,15 @@ public sealed interface ServerMessage {
             int crew,
             List<ActionRun> actions,
             List<AlertRule> alerts,
-            Observation.Station station) implements ServerMessage {
+            Observation.Station station,
+            Observation.Briefing briefing) implements ServerMessage {
 
         /** Every field present: a keyframe. */
         public static Snapshot full(Observation o) {
             return new Snapshot(o.tick(), o.credits(), o.wave(), o.phase(), o.shield(), o.burnRate(),
                     o.shieldEmptyInS(),
                     o.metrics(), o.signals(), o.insights(), o.counters(), o.postmortem(), o.codex(), o.results(),
-                    o.chapter(), o.crew(), o.actions(), o.alerts(), o.station());
+                    o.chapter(), o.crew(), o.actions(), o.alerts(), o.station(), o.briefing());
         }
     }
 

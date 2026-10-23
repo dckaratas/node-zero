@@ -180,3 +180,13 @@ M/M/c kuyruğunda Erlang-C de aynı üstel sönümü verir. Amaç (kademeli pay,
   görünürlüğü ayrı dilimde (9c).
 - Yan düzeltme: haritadaki ilerleme halkası seçeneğin kurulum süresini kullanıyor (indeks seçenekleri yanlış oranlanıyordu).
 - Benchmark: `step` ~3 µs.
+
+## Ek (Dilim 9c, 2026-10-23): dalga temaları (CA–CD)
+- **CA:** tehdit tetikleyicisinde `briefing_key` (olay, kök neden değil): deploy, kampanya, veri büyümesi, gece işi;
+  tehditsiz dalga `briefing.quiet`. Metinler i18n'de (`briefing.*`, herkese açık önek).
+- **CB:** festival duyurusu (`comms.festival_teaser`) dalga 2 brifinginde; dalga 3 brifingi büyüklüğü söyler ("3×, ~1 dk").
+  Önceden duyuru hiç gösterilmiyordu.
+- **CC:** başlığın altında "Next: wave N" kartı (hazırlıkta hep; dalga sürerken sadece comms varsa), dalga başında 4 sn
+  bant, yeni comms gelince kart 4 sn parlar. Dil değişince yenilenir.
+- **CD:** `Observation.Briefing(wave, eventKey, comms)`, snapshot'ta delta alanı `briefing`; bölümde dalga kalmayınca yok.
+- Testler: `BriefingTest` (sim-core), `briefing.test.ts` (istemci); fixture'lar yenilendi.

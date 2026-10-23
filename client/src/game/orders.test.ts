@@ -13,7 +13,7 @@ function item(id: string, credits: number, requiresCounters: string[] = []): Cat
 
 function view(credits: number, counters: View['counters'] = [], tick = 100): View {
   return { tick, credits, wave: 0, phase: 'PREPARATION', shield: 1, burnRate: 0, shieldEmptyInS: -1, metrics: {},
-    signals: [], insights: [], counters, postmortem: null, codex: [], results: [], chapter: null, crew: 8, actions: [], alerts: [], station: NODE01 };
+    signals: [], insights: [], counters, postmortem: null, codex: [], results: [], chapter: null, crew: 8, actions: [], alerts: [], station: NODE01, briefing: null };
 }
 
 const prometheus = item('prometheus', 200);

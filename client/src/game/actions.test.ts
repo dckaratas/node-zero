@@ -10,7 +10,7 @@ const restart: CatalogAction = {
 
 function view(tick: number, crew: number, actions: ActionRun[] = []): View {
   return { tick, credits: 1000, wave: 3, phase: 'RUNNING', shield: 1, burnRate: 0, shieldEmptyInS: -1, metrics: {},
-    signals: [], insights: [], counters: [], postmortem: null, codex: [], results: [], chapter: null, crew, actions, alerts: [], station: NODE01 };
+    signals: [], insights: [], counters: [], postmortem: null, codex: [], results: [], chapter: null, crew, actions, alerts: [], station: NODE01, briefing: null };
 }
 
 describe('actionState', () => {

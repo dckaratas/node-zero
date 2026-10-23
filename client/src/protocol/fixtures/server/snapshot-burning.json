@@ -24,5 +24,10 @@
     "dbCpuCores" : 4,
     "dbIoDisks" : 1,
     "appDown" : false
+  },
+  "briefing" : {
+    "wave" : 3,
+    "eventKey" : "briefing.campaign",
+    "comms" : [ ]
   }
 }

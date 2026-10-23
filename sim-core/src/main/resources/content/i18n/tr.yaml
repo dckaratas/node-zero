@@ -1,6 +1,12 @@
 # İçerik metinleri (TR). Her anahtar en.yaml'da da bulunmalı; yükleyici kullanılmayan anahtarları reddeder.
 
 comms.festival_teaser: "Pazarlama: Önümüzdeki döngüde koloniler için büyük haber. Takipte kalın!"
+
+briefing.quiet: "Sakin vardiya: bilinen bir değişiklik yok. Hazırlık için iyi bir an."
+briefing.deploy: "Değişiklik takvimi: sürüm 2.3 bu vardiyada yayına çıkıyor."
+briefing.campaign: "Pazarlama: Koloni Festivali kampanyası başlıyor. Tahmini trafik: normalin 3 katı, yaklaşık bir dakika."
+briefing.data_growth: "Veri: arşiv tablosu her dakika binlerce satır büyüyor."
+briefing.cron: "Planlı iş: gece raporu istasyon saatiyle 03:00'te çalışacak."
 hint.lb_needs_two_nodes: "Yük dengeleyici en az iki node gerektirir. Bölüm 3'te açılır."
 hint.replica_needs_two_nodes: "Okuma kopyası ikinci bir veritabanı node'u gerektirir. Bölüm 3'te açılır."
 

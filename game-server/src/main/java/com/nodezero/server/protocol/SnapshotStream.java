@@ -8,7 +8,7 @@ import java.util.Objects;
  * <ul>
  *   <li>A view equal to the last one sent (ignoring the tick) is skipped: an idle station costs nothing.</li>
  *   <li>{@code insights}, {@code counters}, {@code codex}, {@code results}, {@code actions}, {@code alerts}
- *       and {@code station} are sent only when they changed since the last snapshot.</li>
+ *       {@code station} and {@code briefing} are sent only when they changed since the last snapshot.</li>
  *   <li>Every {@code keyframeEveryTicks} a full snapshot goes out regardless, as a heartbeat and resync.</li>
  * </ul>
  * The socket is ordered and lossless (TCP, slow clients are disconnected, never skipped), so the
@@ -40,6 +40,7 @@ public final class SnapshotStream {
         boolean actions = keyframe || !now.actions().equals(last.actions());
         boolean alerts = keyframe || !now.alerts().equals(last.alerts());
         boolean station = keyframe || !now.station().equals(last.station());
+        boolean briefing = keyframe || !Objects.equals(now.briefing(), last.briefing());
         if (keyframe) {
             lastKeyframeTick = now.tick();
         }
@@ -49,7 +50,7 @@ public final class SnapshotStream {
                 insights ? now.insights() : null, counters ? now.counters() : null,
                 now.postmortem(), codex ? now.codex() : null, results ? now.results() : null, now.chapter(),
                 now.crew(), actions ? now.actions() : null, alerts ? now.alerts() : null,
-                station ? now.station() : null);
+                station ? now.station() : null, briefing ? now.briefing() : null);
     }
 
     private static boolean sameView(Observation a, Observation b) {
@@ -70,6 +71,7 @@ public final class SnapshotStream {
                 && a.crew() == b.crew()
                 && a.actions().equals(b.actions())
                 && a.alerts().equals(b.alerts())
-                && a.station().equals(b.station());
+                && a.station().equals(b.station())
+                && Objects.equals(a.briefing(), b.briefing());
     }
 }
